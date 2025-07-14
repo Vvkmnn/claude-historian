@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/Vvkmnn/claude-historian/compare/v1.0.0...v1.0.1) (2025-07-14)
+
+
+### Bug Fixes
+
+* **npm:** resolve linting errors blocking release workflow ([ba9c053](https://github.com/Vvkmnn/claude-historian/commit/ba9c053d3eb8151498be0d7990ce23223b297192))
+
 # 1.0.0 (2025-07-14)
 
 
