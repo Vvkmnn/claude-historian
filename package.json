@@ -16,18 +16,31 @@
     "build": "tsc && chmod +x dist/index.js",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "prepublishOnly": "npm run build",
-    "test": "echo \"No tests yet\" && exit 0"
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write src",
+    "format:check": "prettier --check src",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "npm run build && npm run lint && npm run format:check",
+    "test": "node dist/index.js --help && npm run type-check"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
+    "@eslint/js": "^9.18.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.18.0",
+    "prettier": "^3.4.2",
+    "semantic-release": "^22.0.12",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.18.0"
   },
   "keywords": [
     "claude",

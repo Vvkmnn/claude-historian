@@ -7,6 +7,8 @@ A Model Context Protocol (MCP) server for searching your Claude Code conversatio
 [![npm version](https://img.shields.io/npm/v/claude-historian.svg)](https://www.npmjs.com/package/claude-historian)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Vvkmnn/claude-historian?utm_source=oss&utm_medium=github&utm_campaign=Vvkmnn%2Fclaude-historian&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 ## install
 
@@ -50,34 +52,34 @@ Runs locally (with cool shades `[⌐■_■]`):
 
 ```
 [⌐■_■] search_conversations query=<query>
-  > How did we fix the Redis connection pooling in production?
-  > That 3am session chasing a semicolon bug for 4 hours
-  > WebSocket reconnection with exponential backoff patterns
+  > "How did we fix that Redis connection pooling nightmare?"
+  > "Docker container keeps crashing on Kubernetes deployment"
+  > "React infinite re-render loop - useEffect dependency hell"
 
 [⌐□_□] find_file_context filepath=<filepath>
-  > What broke when we upgraded React to v18 last month?
-  > When we accidentally committed secrets to the repo
-  > Authentication service refactor with proper error handling
+  > "package.json changes that broke everything last month"
+  > "When we accidentally committed .env to main branch"
+  > "Authentication service refactor - before/after comparison"
 
 [⌐×_×] get_error_solutions error_pattern=<error>
-  > React component re-rendering infinitely in production
-  > That CORS issue that only happened on Fridays somehow
-  > Race condition between DB transactions and cache invalidation
+  > "MODULE_NOT_FOUND - the classic npm/yarn version mismatch"
+  > "CORS preflight failing - but only on production Fridays?"
+  > "Database deadlock during Black Friday traffic spike"
 
 [⌐◆_◆] find_similar_queries query=<query>
-  > Database queries running slower than my morning coffee
-  > Anything about implementing proper error boundaries?
-  > Event sourcing with snapshot management and replay logic
+  > "Database queries slower than my morning coffee brewing"
+  > "How to implement error boundaries without losing sanity"
+  > "State management: Redux vs Zustand vs just useState"
 
 [⌐○_○] list_recent_sessions
-  > Late-night session finally fixing those flaky tests
-  > The great debugging marathon of last Tuesday
-  > Performance sprint that reduced load times by 60%
+  > "Tuesday debugging marathon: 9pm-3am flaky test hunt"
+  > "Performance optimization sprint - reduced bundle 40%"
+  > "The great TypeScript migration of 2024"
 
 [⌐⎚_⎚] find_tool_patterns tool_name=<tool>
-  > Git vs file operations during that refactoring week
-  > Do I search more when stuck on frontend vs backend?
-  > Which tools correlate with my most productive sessions?
+  > "Read → Edit → Bash combo for rapid prototyping"
+  > "When I use Grep vs Task for different searches"
+  > "Git operations during feature branch management"
 ```
 
 ## methodology
@@ -86,34 +88,35 @@ How claude-historian works ([source](https://github.com/Vvkmnn/claude-historian/
 
 ```
 "docker auth" query
-      │
-      ├─> Tokenize: ["docker", "auth*"]
-      │
-      ├─> FTS5
-      │   • "auth*" → authentication ✓
-      │   • "auth*" → authorize ✓
-      │   • "auth*" → OAuth ✓
-      │
-      ├─> Scan conversations:
-      │   • "Fixed authentication bug in Docker" (yesterday) ★★★★★
-      │   • "Docker OAuth implementation" (last week) ★★★
-      │   • "Authorized container access" (last month) ★
-      │
-      └─> Return ranked results
+      |
+      ├─> Classify: implementation query -> boost tool examples
+      |
+      ├─> Stream & Filter:
+      |   • Summary messages -> priority queue *****
+      |   • Tool usage context -> high value ****
+      |   • Error solutions -> targeted ***
+      |
+      ├─> Smart Ranking:
+      |   • "Fixed Docker auth with Read tool" (2h ago) *****
+      |   • "OAuth implementation approach" (yesterday) ****
+      |   • "Container auth debug" (last week) ***
+      |
+      └─> Return Claude Code optimized results
 ```
 
-The logic:
+**Pure streaming architecture using:**
 
-- **[FTS5](https://www.sqlite.org/fts5.html)**: SQLite's full-text search engine with advanced ranking
-- **Prefix matching**: `conn` → connection, connect, reconnect
-- **[Porter stemming](https://tartarus.org/martin/PorterStemmer/)**: `running` → run, `flies` → fly
-- **Fuzzy search**: `recieve` → receive (typos handled)
-- **Time decay**: Yesterday = 5x weight, last week = 3x, older = 1x
+- **[JSON streaming parser](https://en.wikipedia.org/wiki/Streaming_JSON)**: Reads Claude Code conversation files on-demand without full deserialization
+- **[LRU caching](https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU))**: In-memory cache with intelligent eviction for frequently accessed conversations
+- **[TF-IDF inspired scoring](https://en.wikipedia.org/wiki/Tf%E2%80%93idf)**: Term frequency scoring with document frequency weighting for relevance
+- **[Query classification](https://en.wikipedia.org/wiki/Text_classification)**: Naive Bayes-style classification (error/implementation/analysis/general) with adaptive limits
+- **[Edit distance](https://en.wikipedia.org/wiki/Edit_distance)**: Fuzzy matching for technical terms and typo tolerance
+- **[Exponential time decay](https://en.wikipedia.org/wiki/Exponential_decay)**: Recent messages weighted higher with configurable half-life
 
-File access:
+**File access:**
 
 - Reads from: `~/.claude/conversations/`
-- Indexes to: `~/.local/share/claude-historian/history.db`
+- Zero persistent storage or indexing
 - Never leaves your machine
 
 ## development

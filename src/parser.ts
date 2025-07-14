@@ -77,9 +77,9 @@ export class ConversationParser {
     
     // Extract file references
     const filePatterns = [
-      /[\w\-\/\.]+\.(ts|js|json|md|py|java|cpp|c|h|css|html|yml|yaml|toml|rs|go)(?:\b|$)/gi,
-      /src\/[\w\-\/\.]+/gi,
-      /\.\/[\w\-\/\.]+/gi
+      /[\w\-/\\.]+\.(ts|js|json|md|py|java|cpp|c|h|css|html|yml|yaml|toml|rs|go)(?:\b|$)/gi,
+      /src\/[\w\-/\\.]+/gi,
+      /\.\/[\w\-/\\.]+/gi
     ];
     
     const files = new Set<string>();
@@ -188,19 +188,21 @@ export class ConversationParser {
       this.sessions.set(sessionId, {
         sessionId,
         projectPath: decodeProjectPath(projectDir),
-        startTime: message.timestamp,
-        endTime: message.timestamp,
+        startTime: this.isValidTimestamp(message.timestamp) ? message.timestamp : new Date().toISOString(),
+        endTime: this.isValidTimestamp(message.timestamp) ? message.timestamp : new Date().toISOString(),
         messageCount: 0
       });
     }
     
     const session = this.sessions.get(sessionId)!;
-    session.endTime = message.timestamp;
+    session.endTime = this.isValidTimestamp(message.timestamp) ? message.timestamp : session.endTime;
     session.messageCount++;
     
-    // Update start time if this message is earlier
-    if (new Date(message.timestamp) < new Date(session.startTime)) {
-      session.startTime = message.timestamp;
+    // Update start time if this message is earlier (with timestamp validation)
+    if (this.isValidTimestamp(message.timestamp) && this.isValidTimestamp(session.startTime)) {
+      if (new Date(message.timestamp) < new Date(session.startTime)) {
+        session.startTime = message.timestamp;
+      }
     }
   }
 
@@ -213,26 +215,10 @@ export class ConversationParser {
       .sort((a, b) => new Date(b.endTime).getTime() - new Date(a.endTime).getTime());
   }
 
-  async searchSimilarQueries(
-    targetQuery: string, 
-    minSimilarity: number = 0.3
-  ): Promise<CompactMessage[]> {
-    // Simple similarity based on word overlap
-    const targetWords = targetQuery.toLowerCase().split(/\s+/);
-    const similarMessages: CompactMessage[] = [];
-    
-    // This would typically search through all parsed messages
-    // For now, we'll implement a basic version
-    
-    return similarMessages;
+  private isValidTimestamp(timestamp: string): boolean {
+    if (!timestamp || typeof timestamp !== 'string') return false;
+    const date = new Date(timestamp);
+    return !isNaN(date.getTime()) && date.getFullYear() > 2020;
   }
 
-  async findFileContext(filePath: string): Promise<CompactMessage[]> {
-    const fileMessages: CompactMessage[] = [];
-    
-    // This would search through all messages for file references
-    // Implementation would go here
-    
-    return fileMessages;
-  }
 }

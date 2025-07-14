@@ -1,31 +1,16 @@
 import { ConversationParser } from './parser.js';
-import { IntelligentIndexer } from './indexer.js';
 import { CompactMessage, SearchResult, FileContext, ErrorSolution, ToolPattern } from './types.js';
 import { findProjectDirectories, findJsonlFiles, getTimeRangeFilter, extractContentFromMessage } from './utils.js';
 
 export class HistorySearchEngine {
   private parser: ConversationParser;
-  private indexer: IntelligentIndexer;
   private messageCache: Map<string, CompactMessage[]> = new Map();
-  private indexBuilt: boolean = false;
 
   constructor() {
     this.parser = new ConversationParser();
-    this.indexer = new IntelligentIndexer();
   }
 
-  private async ensureIndexBuilt(): Promise<void> {
-    if (this.indexBuilt) return;
-    
-    try {
-      const projectDirs = await findProjectDirectories();
-      await this.indexer.buildIndex(projectDirs);
-      this.indexBuilt = true;
-    } catch (error) {
-      console.error('Failed to build index, falling back to slower search:', error);
-      // Continue without index - searches will be slower but still work
-    }
-  }
+  // Pure streaming approach for zero-config operation
 
   async searchConversations(
     query: string,
@@ -34,21 +19,14 @@ export class HistorySearchEngine {
     limit: number = 50
   ): Promise<SearchResult> {
     const startTime = Date.now();
-    const safeLimit = Math.min(Math.max(limit, 1), 200); // Enforce reasonable limits
+    // Dynamic limit based on query type - Claude Code needs context depth
+    const queryType = this.classifyQueryType(query);
+    const safeLimit = this.getOptimalLimit(queryType, limit);
     
     try {
-      await this.ensureIndexBuilt();
-      
-      // Enhance query with Claude-powered intelligence
-      const enhancedQuery = await this.enhanceQueryWithAI(query);
-      const searchTerms = enhancedQuery || query;
-      
-      // Use intelligent index if available, otherwise fall back to slower method
-      if (this.indexBuilt) {
-        return await this.searchWithIndex(searchTerms, safeLimit, startTime, projectFilter, timeframe);
-      } else {
-        return await this.searchWithoutIndex(searchTerms, safeLimit, startTime, projectFilter, timeframe);
-      }
+      // Pure streaming search approach
+      const enhancedQuery = this.enhanceQueryIntelligently(query);
+      return await this.streamingSearch(enhancedQuery, safeLimit, startTime, projectFilter, timeframe);
     } catch (error) {
       console.error('Search error:', error);
       return {
@@ -60,62 +38,7 @@ export class HistorySearchEngine {
     }
   }
 
-  private async searchWithIndex(
-    query: string,
-    limit: number,
-    startTime: number,
-    projectFilter?: string,
-    timeframe?: string
-  ): Promise<SearchResult> {
-    try {
-      const keywords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-      const indexResults = this.indexer.searchByKeywords(keywords, limit * 2);
-      
-      // Convert index results to compact messages
-      const messages: CompactMessage[] = [];
-      for (const indexResult of indexResults) {
-        try {
-          const fullMessage = await this.indexer.getFullMessage(indexResult);
-          if (fullMessage) {
-            const content = extractContentFromMessage(fullMessage.message || {});
-            if (content) {
-              const compactMessage: CompactMessage = {
-                uuid: indexResult.uuid,
-                timestamp: indexResult.timestamp,
-                type: indexResult.type,
-                content: content.substring(0, 1000),
-                sessionId: indexResult.sessionId,
-                projectPath: indexResult.projectDir,
-                relevanceScore: this.calculateRelevanceScore(fullMessage, query),
-                context: this.extractDetailedContext(fullMessage)
-              };
-              
-              // Apply filters
-              if (projectFilter && !indexResult.projectDir.includes(projectFilter)) continue;
-              if (timeframe && !this.matchesTimeframe(indexResult.timestamp, timeframe)) continue;
-              
-              messages.push(compactMessage);
-            }
-          }
-        } catch (messageError) {
-          console.error(`Error processing message ${indexResult.uuid}:`, messageError);
-          continue;
-        }
-      }
-
-      return {
-        messages: messages.slice(0, limit),
-        totalResults: indexResults.length,
-        searchQuery: query,
-        executionTime: Date.now() - startTime
-      };
-    } catch (error) {
-      console.error('Index search error:', error);
-      throw error;
-    }
-  }
-
-  private async searchWithoutIndex(
+  private async streamingSearch(
     query: string,
     limit: number,
     startTime: number,
@@ -124,10 +47,11 @@ export class HistorySearchEngine {
   ): Promise<SearchResult> {
     const timeFilter = getTimeRangeFilter(timeframe);
     const allMessages: CompactMessage[] = [];
+    const summaryMessages: CompactMessage[] = []; // Prioritize summaries
 
     try {
       const projectDirs = await findProjectDirectories();
-      const maxDirs = Math.min(projectDirs.length, 20); // Limit for performance
+      const maxDirs = Math.min(projectDirs.length, 10); // Limit for performance
       
       for (let i = 0; i < maxDirs; i++) {
         const projectDir = projectDirs[i];
@@ -138,7 +62,11 @@ export class HistorySearchEngine {
         }
 
         const jsonlFiles = await findJsonlFiles(projectDir);
-        const maxFiles = Math.min(jsonlFiles.length, 10); // Limit files per project
+        // Adaptive file limit based on query complexity and results found
+        const targetResults = Math.max(limit, 20);
+        const currentResults = summaryMessages.length + allMessages.length;
+        const filesNeeded = Math.max(1, Math.ceil((targetResults - currentResults) / 8));
+        const maxFiles = Math.min(jsonlFiles.length, filesNeeded);
         
         for (let j = 0; j < maxFiles; j++) {
           const file = jsonlFiles[j];
@@ -150,22 +78,39 @@ export class HistorySearchEngine {
               messages = this.messageCache.get(cacheKey)!;
             } else {
               messages = await this.parser.parseJsonlFile(projectDir, file, query, timeFilter);
-              // Cache results for performance (with size limit)
+              // Intelligent caching: prioritize recent and high-value content
               if (this.messageCache.size < 100) {
                 this.messageCache.set(cacheKey, messages);
+              } else if (messages.some(m => (m.relevanceScore || 0) > 8)) {
+                // Replace least valuable cache entry with high-value content
+                const cacheEntries = Array.from(this.messageCache.entries());
+                const leastValuable = cacheEntries.reduce((min, [key, msgs]) => {
+                  const avgScore = msgs.reduce((sum, m) => sum + (m.relevanceScore || 0), 0) / msgs.length;
+                  return avgScore < (min.avgScore || Infinity) ? { key, avgScore } : min;
+                }, { key: '', avgScore: Infinity });
+                
+                if (leastValuable.key) {
+                  this.messageCache.delete(leastValuable.key);
+                  this.messageCache.set(cacheKey, messages);
+                }
               }
             }
             
-            // Filter messages by query relevance
-            const relevantMessages = messages.filter(msg => {
-              if (!query) return true;
-              return (msg.relevanceScore || 0) > 0;
+            // Fast pre-filter: only process messages with minimum relevance
+            const qualifyingMessages = messages.filter(msg => (msg.relevanceScore || 0) >= 1);
+            
+            // Intelligent message categorization for Claude Code
+            qualifyingMessages.forEach(msg => {
+              if (this.isSummaryMessage(msg)) {
+                summaryMessages.push(msg);
+              } else if (this.isHighValueMessage(msg, query)) {
+                allMessages.push(msg);
+              }
             });
             
-            allMessages.push(...relevantMessages);
-            
-            // Early exit if we have enough results
-            if (allMessages.length > limit * 3) break;
+            // Smart early exit: stop when we have enough high-quality results
+            const totalQuality = summaryMessages.length * 2 + allMessages.length;
+            if (totalQuality >= targetResults) break;
             
           } catch (fileError) {
             console.error(`Error processing file ${file}:`, fileError);
@@ -173,31 +118,191 @@ export class HistorySearchEngine {
           }
         }
         
-        // Early exit if we have enough results
-        if (allMessages.length > limit * 3) break;
+        // Early exit with sufficient quality results
+        const totalQuality = summaryMessages.length * 2 + allMessages.length;
+        if (totalQuality >= Math.max(limit * 1.5, 30)) break;
       }
 
-      // Sort by relevance score and timestamp
-      const sortedMessages = allMessages
-        .sort((a, b) => {
-          const scoreDiff = (b.relevanceScore || 0) - (a.relevanceScore || 0);
-          if (scoreDiff !== 0) return scoreDiff;
-          return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-        })
-        .slice(0, limit);
+      // Intelligent result prioritization for Claude Code workflows
+      const prioritizedResults = this.prioritizeResultsForClaudeCode(summaryMessages, allMessages, query, limit);
 
       return {
-        messages: sortedMessages,
-        totalResults: allMessages.length,
+        messages: prioritizedResults,
+        totalResults: summaryMessages.length + allMessages.length,
         searchQuery: query,
         executionTime: Date.now() - startTime
       };
 
     } catch (error) {
-      console.error('Fallback search error:', error);
+      console.error('Streaming search error:', error);
       throw error;
     }
   }
+
+  private isSummaryMessage(message: CompactMessage): boolean {
+    const content = message.content.toLowerCase();
+    const summaryIndicators = [
+      'summary:',
+      'in summary',
+      'to recap',
+      'here\'s what we accomplished',
+      'let me summarize',
+      'to sum up',
+      'overview:',
+      'in conclusion',
+      'final summary',
+      'session summary'
+    ];
+    
+    return summaryIndicators.some(indicator => content.includes(indicator)) ||
+           (message.type === 'assistant' && content.includes('summary') && content.length > 100);
+  }
+
+  private isHighValueMessage(message: CompactMessage, _query: string): boolean {
+    const relevanceScore = message.relevanceScore || 0;
+    const content = message.content.toLowerCase();
+    
+    // Always include high relevance scores
+    if (relevanceScore >= 5) return true;
+    
+    // Include tool usage messages - crucial for Claude Code
+    if (message.context?.toolsUsed && message.context.toolsUsed.length > 0) return true;
+    
+    // Include error resolution messages
+    if (message.context?.errorPatterns && message.context.errorPatterns.length > 0) return true;
+    
+    // Include file operation messages
+    if (message.context?.filesReferenced && message.context.filesReferenced.length > 0) return true;
+    
+    // Include assistant messages with substantial solutions
+    if (message.type === 'assistant' && content.length > 200 && relevanceScore > 0) return true;
+    
+    // Include user messages that are substantial queries
+    if (message.type === 'user' && content.length > 50 && content.length < 500 && relevanceScore > 0) return true;
+    
+    return false;
+  }
+
+  private prioritizeResultsForClaudeCode(
+    summaryMessages: CompactMessage[], 
+    allMessages: CompactMessage[], 
+    query: string,
+    limit: number
+  ): CompactMessage[] {
+    const queryType = this.classifyQueryType(query);
+    
+    // Define priority buckets for different query types
+    const priorityBuckets = {
+      error: {
+        summaries: 2,        // Few summaries for error queries
+        toolMessages: 5,     // More tool usage examples
+        regular: 8           // More detailed solutions
+      },
+      implementation: {
+        summaries: 3,        // Some summaries for context
+        toolMessages: 8,     // Heavy tool usage examples
+        regular: 10          // Implementation details
+      },
+      analysis: {
+        summaries: 5,        // More summaries for understanding
+        toolMessages: 4,     // Some tool examples
+        regular: 8           // Analysis and reasoning
+      },
+      general: {
+        summaries: 3,        // Balanced approach
+        toolMessages: 3,
+        regular: 4
+      }
+    };
+
+    const buckets = priorityBuckets[queryType] || priorityBuckets.general;
+    
+    // Categorize messages by value type
+    const toolMessages = allMessages.filter(msg => 
+      msg.context?.toolsUsed && msg.context.toolsUsed.length > 0
+    );
+    const regularMessages = allMessages.filter(msg => 
+      !msg.context?.toolsUsed || msg.context.toolsUsed.length === 0
+    );
+    
+    // Sort each category by relevance
+    const sortedSummaries = summaryMessages.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+    const sortedToolMessages = toolMessages.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+    const sortedRegularMessages = regularMessages.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+    
+    // Build result set with intelligent distribution
+    const results: CompactMessage[] = [];
+    
+    // Add summaries first (but not too many)
+    results.push(...sortedSummaries.slice(0, Math.min(buckets.summaries, limit / 4)));
+    
+    // Add tool messages (critical for Claude Code)
+    const remainingAfterSummaries = limit - results.length;
+    results.push(...sortedToolMessages.slice(0, Math.min(buckets.toolMessages, remainingAfterSummaries / 2)));
+    
+    // Fill remaining with regular messages
+    const remainingSlots = limit - results.length;
+    results.push(...sortedRegularMessages.slice(0, Math.min(buckets.regular, remainingSlots)));
+    
+    // If we still have slots, fill with any remaining high-value messages
+    if (results.length < limit) {
+      const remaining = [...sortedSummaries, ...sortedToolMessages, ...sortedRegularMessages]
+        .filter(msg => !results.includes(msg))
+        .sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+      
+      results.push(...remaining.slice(0, limit - results.length));
+    }
+    
+    return results.slice(0, limit);
+  }
+
+  private classifyQueryType(query: string): 'error' | 'implementation' | 'analysis' | 'general' {
+    const lowerQuery = query.toLowerCase();
+    
+    if (lowerQuery.includes('error') || lowerQuery.includes('bug') || lowerQuery.includes('fix') || lowerQuery.includes('issue')) {
+      return 'error';
+    }
+    if (lowerQuery.includes('implement') || lowerQuery.includes('create') || lowerQuery.includes('build') || lowerQuery.includes('add')) {
+      return 'implementation';
+    }
+    if (lowerQuery.includes('how') || lowerQuery.includes('why') || lowerQuery.includes('analyze') || lowerQuery.includes('understand')) {
+      return 'analysis';
+    }
+    return 'general';
+  }
+
+  private getOptimalLimit(queryType: string, requestedLimit: number): number {
+    const baseLimits = {
+      error: 15,      // Error queries need multiple solution attempts
+      implementation: 25, // Implementation needs examples and approaches  
+      analysis: 20,    // Analysis needs context and reasoning
+      general: 10      // General queries can be more focused
+    };
+    
+    const optimal = baseLimits[queryType as keyof typeof baseLimits] || 10;
+    return Math.min(Math.max(requestedLimit, optimal), 100); // Cap at 100 for performance
+  }
+
+  private enhanceQueryIntelligently(query: string): string {
+    const lowerQuery = query.toLowerCase();
+    
+    // Add contextual terms for Claude Code-specific patterns
+    if (lowerQuery.includes('error') || lowerQuery.includes('bug')) {
+      return `${query} solution fix resolve tool_result`;
+    }
+    if (lowerQuery.includes('implement') || lowerQuery.includes('create')) {
+      return `${query} solution approach code example`;
+    }
+    if (lowerQuery.includes('optimize') || lowerQuery.includes('performance')) {
+      return `${query} improvement solution approach`;
+    }
+    if (lowerQuery.includes('file') || lowerQuery.includes('read') || lowerQuery.includes('edit')) {
+      return `${query} tool_use Read Edit Write`;
+    }
+    
+    return query;
+  }
+
 
   private calculateRelevanceScore(message: any, query: string): number {
     try {
@@ -209,20 +314,36 @@ export class HistorySearchEngine {
       
       let score = 0;
       
-      // Exact phrase match
-      if (lowerContent.includes(lowerQuery)) score += 10;
+      // Exact phrase match - high value for Claude Code
+      if (lowerContent.includes(lowerQuery)) score += 15;
       
-      // Word matches
-      const queryWords = lowerQuery.split(/\s+/);
+      // Enhanced word matching with context awareness
+      const queryWords = lowerQuery.split(/\s+/).filter(w => w.length > 2);
       const contentWords = lowerContent.split(/\s+/);
       const matches = queryWords.filter(word => 
         contentWords.some(cWord => cWord.includes(word))
       );
-      score += matches.length * 2;
+      score += matches.length * 3;
       
-      // Bonus for tool usage and file references
-      if (message.type === 'tool_use' || message.type === 'tool_result') score += 3;
-      if (content.includes('.ts') || content.includes('.js') || content.includes('src/')) score += 2;
+      // High bonus for tool usage - essential for Claude Code queries
+      if (message.type === 'tool_use' || message.type === 'tool_result') score += 8;
+      if (lowerContent.includes('tool_use') || lowerContent.includes('called the')) score += 6;
+      
+      // Code file references - crucial for development queries
+      if (content.includes('.ts') || content.includes('.js') || content.includes('src/')) score += 4;
+      if (content.includes('package.json') || content.includes('.md')) score += 3;
+      
+      // Error resolution context
+      if (lowerContent.includes('error') || lowerContent.includes('fix')) score += 4;
+      if (lowerContent.includes('solution') || lowerContent.includes('resolved')) score += 3;
+      
+      // Assistant messages with substantial content get bonus
+      if (message.type === 'assistant' && content.length > 200) score += 2;
+      
+      // Recent conversations are more valuable
+      const timestamp = message.timestamp || '';
+      const isRecent = new Date(timestamp) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      if (isRecent) score += 1;
       
       return score;
     } catch {
@@ -284,7 +405,6 @@ export class HistorySearchEngine {
   }
 
   async findSimilarQueries(targetQuery: string, limit: number = 10): Promise<CompactMessage[]> {
-    const targetWords = targetQuery.toLowerCase().split(/\s+/).filter(word => word.length > 2);
     const allMessages: CompactMessage[] = [];
     
     try {
@@ -306,7 +426,7 @@ export class HistorySearchEngine {
           for (const query of userQueries) {
             const similarity = this.calculateQuerySimilarity(targetQuery, query.content);
             // Lowered threshold from 0.3 to 0.1 and added partial matching
-            if (similarity > 0.1 || this.hasKeywordMatch(targetQuery, query.content)) {
+            if (similarity > 0.4 || this.hasExactKeywords(targetQuery, query.content)) {
               query.relevanceScore = similarity;
               allMessages.push(query);
             }
@@ -340,12 +460,11 @@ export class HistorySearchEngine {
           // Find error patterns and their solutions
           for (let i = 0; i < messages.length - 1; i++) {
             const current = messages[i];
-            const next = messages[i + 1];
             
-            if (current.context?.errorPatterns?.some(err => 
+            if ((current.context?.errorPatterns?.some(err => 
               err.toLowerCase().includes(errorPattern.toLowerCase())
-            )) {
-              const errorKey = current.context.errorPatterns[0];
+            )) || this.hasErrorInContent(current.content, errorPattern)) {
+              const errorKey = current.context?.errorPatterns?.[0] || errorPattern;
               
               if (!errorMap.has(errorKey)) {
                 errorMap.set(errorKey, []);
@@ -418,7 +537,7 @@ export class HistorySearchEngine {
           toolName: tool,
           successfulUsages: messages.slice(0, 10),
           commonPatterns,
-          bestPractices: this.extractBestPractices(messages)
+          bestPractices: this.extractBestPractices()
         });
       }
       
@@ -527,16 +646,20 @@ export class HistorySearchEngine {
     return Math.min((totalScore / maxWords) * lengthPenalty, 1.0);
   }
 
-  private hasKeywordMatch(query1: string, query2: string): boolean {
-    const keywords1 = query1.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-    const keywords2 = query2.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  private hasExactKeywords(query1: string, query2: string): boolean {
+    const keywords1 = query1.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    const keywords2 = query2.toLowerCase().split(/\s+/).filter(w => w.length > 2);
     
-    // Check if they share at least 2 keywords or 1 important keyword
+    // High-value technical keywords get priority
+    const techKeywords = ['error', 'fix', 'implement', 'optimize', 'debug', 'build', 'deploy', 'test', 'tool', 'file', 'code'];
+    const hasTechMatch = keywords1.some(k1 => techKeywords.includes(k1) && keywords2.some(k2 => k2.includes(k1)));
+    
+    // Check if they share at least 2 keywords or 1 important technical keyword
     const sharedKeywords = keywords1.filter(k => 
       keywords2.some(k2 => k === k2 || k.includes(k2) || k2.includes(k))
     );
     
-    return sharedKeywords.length >= 2 || 
+    return hasTechMatch || sharedKeywords.length >= 2 || 
            sharedKeywords.some(k => k.length > 6); // Important long keywords
   }
 
@@ -566,22 +689,44 @@ export class HistorySearchEngine {
   }
 
   private extractCommonPatterns(messages: CompactMessage[]): string[] {
-    // Simple pattern extraction - could be enhanced
+    // Enhanced pattern extraction with success rates and recommendations
     const patterns = new Set<string>();
+    const toolCombos = new Map<string, number>();
+    const filePatterns = new Map<string, number>();
     
     messages.forEach(msg => {
-      if (msg.context?.toolsUsed) {
-        patterns.add(`Tool usage: ${msg.context.toolsUsed.join(', ')}`);
+      if (msg.context?.toolsUsed && msg.context.toolsUsed.length > 0) {
+        const toolCombo = msg.context.toolsUsed.sort().join(' → ');
+        toolCombos.set(toolCombo, (toolCombos.get(toolCombo) || 0) + 1);
       }
       if (msg.context?.filesReferenced) {
-        patterns.add(`File types: ${msg.context.filesReferenced.map(f => f.split('.').pop()).join(', ')}`);
+        const fileTypes = msg.context.filesReferenced.map(f => f.split('.').pop()).filter(Boolean);
+        fileTypes.forEach(type => filePatterns.set(type!, (filePatterns.get(type!) || 0) + 1));
       }
     });
+    
+    // Add most successful tool combinations
+    const topToolCombos = Array.from(toolCombos.entries())
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3);
+    
+    topToolCombos.forEach(([combo, count]) => {
+      patterns.add(`${combo} (${count}x successful)`);
+    });
+    
+    // Add common file type patterns
+    const topFileTypes = Array.from(filePatterns.entries())
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3);
+    
+    if (topFileTypes.length > 0) {
+      patterns.add(`Common files: ${topFileTypes.map(([type, count]) => `${type} (${count}x)`).join(', ')}`);
+    }
     
     return Array.from(patterns);
   }
 
-  private extractBestPractices(messages: CompactMessage[]): string[] {
+  private extractBestPractices(): string[] {
     // Extract best practices from successful tool usage
     return [
       'Use appropriate tools for file operations',
@@ -590,141 +735,18 @@ export class HistorySearchEngine {
     ];
   }
 
-  private async enhanceQueryWithAI(query: string): Promise<string | null> {
-    try {
-      // Fast, token-efficient query enhancement without external API calls
-      // Preserves context and speeds up searches through intelligent expansion
-      
-      const queryAnalysis = this.analyzeQueryIntent(query);
-      
-      if (queryAnalysis.needsExpansion) {
-        const enhanced = this.expandQueryIntelligently(query, queryAnalysis);
-        // Only enhance if it meaningfully improves search without bloating
-        if (enhanced !== query && enhanced.length < query.length * 2) {
-          return enhanced;
-        }
-      }
-      
-      return null; // Use original query
-    } catch (error) {
-      console.error('Query enhancement error:', error);
-      return null; // Fallback to original query
-    }
+  private hasErrorInContent(content: string, errorPattern: string): boolean {
+    const lowerContent = content.toLowerCase();
+    const lowerPattern = errorPattern.toLowerCase();
+    
+    // Check for exact error pattern
+    if (lowerContent.includes(lowerPattern)) return true;
+    
+    // Check for common error indicators
+    const errorKeywords = ['error:', 'failed:', 'exception:', 'cannot', 'unable to', 'not found', 'permission denied'];
+    return errorKeywords.some(keyword => 
+      lowerContent.includes(keyword) && lowerContent.includes(lowerPattern.split('_')[0])
+    );
   }
 
-  private analyzeQueryIntent(query: string): { needsExpansion: boolean; intent: string; keywords: string[] } {
-    const lowerQuery = query.toLowerCase();
-    const keywords = query.split(/\s+/).filter(w => w.length > 2);
-    
-    // Detect common search intents
-    const intents = {
-      error: /error|bug|fail|exception|crash|broken/i.test(query),
-      feature: /implement|add|create|build|new|feature/i.test(query),
-      fix: /fix|resolve|solve|repair/i.test(query),
-      documentation: /docs|documentation|readme|help|guide/i.test(query),
-      configuration: /config|setup|install|configure/i.test(query),
-      performance: /slow|performance|optimize|speed|memory/i.test(query),
-      testing: /test|spec|jest|cypress|playwright/i.test(query),
-      deployment: /deploy|build|ci|cd|production/i.test(query)
-    };
-    
-    const detectedIntent = Object.keys(intents).find(intent => intents[intent as keyof typeof intents]) || 'general';
-    
-    return {
-      needsExpansion: keywords.length < 3 || detectedIntent !== 'general',
-      intent: detectedIntent,
-      keywords
-    };
-  }
-
-  private expandQueryIntelligently(originalQuery: string, analysis: { intent: string; keywords: string[] }): string {
-    // Context-preserving, token-efficient query expansion
-    // Only adds the most relevant single term to avoid search dilution
-    
-    const contextualExpansions: Record<string, string> = {
-      error: 'debugging',
-      feature: 'implementation', 
-      fix: 'solution',
-      documentation: 'readme',
-      configuration: 'setup',
-      performance: 'optimization',
-      testing: 'test',
-      deployment: 'build'
-    };
-    
-    // Smart expansion: only add one highly relevant term
-    const expansion = contextualExpansions[analysis.intent];
-    
-    if (expansion && !originalQuery.toLowerCase().includes(expansion)) {
-      return `${originalQuery} ${expansion}`;
-    }
-    
-    return originalQuery;
-  }
-
-  private extractDetailedContext(message: any): CompactMessage['context'] {
-    const context: CompactMessage['context'] = {};
-    const content = extractContentFromMessage(message.message || {});
-    
-    // Extract files
-    const filePatterns = [
-      /[\w\-\/\.]+\.(ts|js|json|md|py|java|cpp|c|h|css|html|yml|yaml|toml|rs|go)(?:\b|$)/gi,
-      /src\/[\w\-\/\.]+/gi,
-      /\.\/[\w\-\/\.]+/gi
-    ];
-    
-    const files = new Set<string>();
-    filePatterns.forEach(pattern => {
-      const matches = content.match(pattern);
-      if (matches) {
-        matches.forEach(match => files.add(match));
-      }
-    });
-    
-    if (files.size > 0) {
-      context.filesReferenced = Array.from(files);
-    }
-    
-    // Extract tools using the same logic as parser
-    const tools = new Set<string>();
-    
-    if (message.message?.content) {
-      const toolContent = Array.isArray(message.message.content) 
-        ? message.message.content 
-        : [message.message.content];
-      
-      toolContent
-        .filter((item: any) => item && item.type === 'tool_use' && item.name)
-        .forEach((item: any) => {
-          const cleanName = item.name.replace(/^mcp__.*?__/, '').replace(/[_-]/g, '');
-          if (cleanName) tools.add(cleanName);
-        });
-    }
-    
-    // Pattern matching for tools in content
-    const toolPatterns = [
-      /\[Tool:\s*(\w+)\]/gi,
-      /tool_use.*?"name":\s*"([^"]+)"/gi
-    ];
-    
-    toolPatterns.forEach(pattern => {
-      pattern.lastIndex = 0;
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        if (match[1]) {
-          const cleanName = match[1].replace(/^mcp__.*?__/, '').replace(/[_-]/g, '');
-          if (cleanName) tools.add(cleanName);
-        }
-        if (match.index === pattern.lastIndex) {
-          pattern.lastIndex++;
-        }
-      }
-    });
-    
-    if (tools.size > 0) {
-      context.toolsUsed = Array.from(tools);
-    }
-    
-    return Object.keys(context).length > 0 ? context : undefined;
-  }
 }
