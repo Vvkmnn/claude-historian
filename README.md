@@ -2,41 +2,37 @@
 
 ![claude-historian](demo.gif)
 
-**🔍 A blazing-fast Model Context Protocol (MCP) server for searching your Claude Code conversation history**
+A Model Context Protocol (MCP) server for searching your Claude Code conversation history. Find past solutions, track file changes, and learn from previous work.
 
-Find past solutions, track file changes, and learn from previous work with intelligent search algorithms.
-
-[![npm version](https://img.shields.io/npm/v/claude-historian.svg)](https://www.npmjs.com/package/claude-historian)
-[![npm downloads](https://img.shields.io/npm/dm/claude-historian.svg)](https://www.npmjs.com/package/claude-historian)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![npm version](https://img.shields.io/npm/v/claude-historian.svg)](https://www.npmjs.com/package/claude-historian)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
-[![GitHub Release](https://img.shields.io/github/v/release/Vvkmnn/claude-historian)](https://github.com/Vvkmnn/claude-historian/releases)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
+![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Vvkmnn/claude-historian?utm_source=oss&utm_medium=github&utm_campaign=Vvkmnn%2Fclaude-historian&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
-## 🚀 Quick Start
+## install
 
-### Requirements
-- [Claude Code](https://claude.ai/code) - The official Claude CLI
-- Node.js 20+ (automatically handled by npx)
+Requirements:
 
-### One-Command Installation
+- [Claude Code](https://claude.ai/code)
+
+That's it. No `npm install` needed; thare are no external dependencies or local databases; only search algorithms.
+
+**From shell:**
 
 ```bash
-# Install via Claude CLI (recommended)
 claude mcp add claude-historian -- npx claude-historian
-
-# Or add manually to any MCP-compatible client
-npx claude-historian --config
 ```
 
-**Zero setup required** - No npm install, no external dependencies, no local databases. Just pure search algorithms.
+**From inside Claude** (restart required):
 
-### Alternative Configurations
+```
+Add this to our global mcp config: npx claude-historian
 
-<details>
-<summary>📱 Manual MCP Configuration</summary>
+Install this mcp: https://github.com/Vvkmnn/claude-historian
+```
 
-For Cursor, Windsurf, or other MCP clients:
+**From any manually configurable `mcp.json`**: (Cursor, Windsurf, etc.)
 
 ```json
 {
@@ -49,166 +45,107 @@ For Cursor, Windsurf, or other MCP clients:
   }
 }
 ```
-</details>
 
-<details>
-<summary>🔧 From Inside Claude</summary>
+## features
 
-Tell Claude directly:
+[MCP server](https://modelcontextprotocol.io/) that gives Claude access to your conversation history. Fast search with smart prioritization.
+
+Runs locally (with cool shades `[⌐■_■]`):
+
 ```
-Add this to our global mcp config: npx claude-historian
-```
-*(Requires restart)*
-</details>
+[⌐■_■] search_conversations query=<query>
+  > "How did we fix that Redis connection pooling nightmare?"
+  > "Docker container keeps crashing on Kubernetes deployment"
+  > "React infinite re-render loop - useEffect dependency hell"
 
-## ✨ Features
+[⌐□_□] find_file_context filepath=<filepath>
+  > "package.json changes that broke everything last month"
+  > "When we accidentally committed .env to main branch"
+  > "Authentication service refactor - before/after comparison"
 
-**7 Intelligent Search Tools** with smart prioritization and token optimization:
+[⌐×_×] get_error_solutions error_pattern=<error>
+  > "MODULE_NOT_FOUND - the classic npm/yarn version mismatch"
+  > "CORS preflight failing - but only on production Fridays?"
+  > "Database deadlock during Black Friday traffic spike"
 
-```bash
-[⌐■_■] search_conversations query="error handling patterns"
-  🎯 Smart query enhancement and classification
-  📊 Summary-first results for maximum context
-  ⚡ 68% faster than database-based alternatives
-
-[⌐□_□] find_file_context filepath="package.json"
-  📁 Track file evolution across conversations
-  🔍 Context-aware operation type detection (read/edit)
-  📈 Rich change history with timestamps
-
-[⌐×_×] get_error_solutions error_pattern="MODULE_NOT_FOUND"
-  🚨 Learn from past debugging sessions
-  💡 Pattern matching with content scanning
-  🔄 Solution frequency and success tracking
-
-[⌐◆_◆] find_similar_queries query="state management approaches"
-  🧠 Enhanced similarity with semantic understanding
-  🎯 Technical keyword prioritization
-  📝 Query evolution tracking
+[⌐◆_◆] find_similar_queries query=<query>
+  > "Database queries slower than my morning coffee brewing"
+  > "How to implement error boundaries without losing sanity"
+  > "State management: Redux vs Zustand vs just useState"
 
 [⌐○_○] list_recent_sessions
-  📅 Smart activity detection and grouping
-  🛠️  Tool usage and file modification tracking
-  ⏰ Intelligent time-based filtering
+  > "Tuesday debugging marathon: 9pm-3am flaky test hunt"
+  > "Performance optimization sprint - reduced bundle 40%"
+  > "The great TypeScript migration of 2024"
 
-[⌐◉_◉] extract_compact_summary session_id="feature-branch-work"
-  📋 AI-powered outcome extraction
-  🔧 Tool usage pattern analysis
-  💾 Minimal token consumption design
-
-[⌐⎚_⎚] find_tool_patterns tool_name="Read"
-  📊 Success rate analysis and recommendations
-  🔄 Common workflow pattern detection
-  💎 Best practice extraction
+[⌐⎚_⎚] find_tool_patterns tool_name=<tool>
+  > "Read → Edit → Bash combo for rapid prototyping"
+  > "When I use Grep vs Task for different searches"
+  > "Git operations during feature branch management"
 ```
 
-## 🏗️ Architecture
+## methodology
 
-**Pure Streaming Architecture** - No databases, no indexing, no persistence:
+How claude-historian works ([source](https://github.com/Vvkmnn/claude-historian/tree/main/src)):
 
-```mermaid
-flowchart LR
-    A[Query Input] --> B[Query Classification]
-    B --> C[Stream Conversations]
-    C --> D[Smart Filtering]
-    D --> E[Relevance Scoring]
-    E --> F[Summary Prioritization]
-    F --> G[Optimized Results]
+```
+"docker auth" query
+      |
+      ├─> Classify: implementation query -> boost tool examples
+      |
+      ├─> Stream & Filter:
+      |   • Summary messages -> priority queue *****
+      |   • Tool usage context -> high value ****
+      |   • Error solutions -> targeted ***
+      |
+      ├─> Smart Ranking:
+      |   • "Fixed Docker auth with Read tool" (2h ago) *****
+      |   • "OAuth implementation approach" (yesterday) ****
+      |   • "Container auth debug" (last week) ***
+      |
+      └─> Return Claude Code optimized results
 ```
 
-### Key Technologies
-- **[JSON Streaming](https://en.wikipedia.org/wiki/Streaming_JSON)**: On-demand parsing without full deserialization
-- **[LRU Caching](https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU))**: Intelligent memory management
-- **[TF-IDF Scoring](https://en.wikipedia.org/wiki/Tf%E2%80%93idf)**: Relevance ranking with context awareness
-- **[Query Classification](https://en.wikipedia.org/wiki/Text_classification)**: Adaptive limits based on query type
-- **[Fuzzy Matching](https://en.wikipedia.org/wiki/Edit_distance)**: Typo tolerance and technical term matching
-- **[Time Decay](https://en.wikipedia.org/wiki/Exponential_decay)**: Recent conversations weighted higher
+**Pure streaming architecture using:**
 
-### Performance Benefits
-- ⚡ **68% faster** than database approaches
-- 💾 **Zero persistent storage** - privacy first
-- 🔒 **Never leaves your machine** - complete data privacy
-- 📈 **Token optimized** - summary-first, progressive detail
+- **[JSON streaming parser](https://en.wikipedia.org/wiki/Streaming_JSON)**: Reads Claude Code conversation files on-demand without full deserialization
+- **[LRU caching](<https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)>)**: In-memory cache with intelligent eviction for frequently accessed conversations
+- **[TF-IDF inspired scoring](https://en.wikipedia.org/wiki/Tf%E2%80%93idf)**: Term frequency scoring with document frequency weighting for relevance
+- **[Query classification](https://en.wikipedia.org/wiki/Text_classification)**: Naive Bayes-style classification (error/implementation/analysis/general) with adaptive limits
+- **[Edit distance](https://en.wikipedia.org/wiki/Edit_distance)**: Fuzzy matching for technical terms and typo tolerance
+- **[Exponential time decay](https://en.wikipedia.org/wiki/Exponential_decay)**: Recent messages weighted higher with configurable half-life
 
-## 📦 npm Package Information
+**File access:**
+
+- Reads from: `~/.claude/conversations/`
+- Zero persistent storage or indexing
+- Never leaves your machine
+
+## development
 
 ```bash
-# View package info
-npm view claude-historian
-
-# Check latest version
-npm view claude-historian version
-
-# View all available versions
-npm view claude-historian versions --json
-
-# Get package documentation
-npm docs claude-historian
-```
-
-**Package Stats:**
-- 🎯 Zero external dependencies (only @modelcontextprotocol/sdk)
-- 📏 Minimal bundle size (~31KB compressed)
-- 🔧 Cross-platform compatibility (Windows/macOS/Linux)
-- 🚀 Automatic updates via npx
-
-## 🛠️ Development
-
-### Local Development
-
-```bash
-# Clone and setup
-git clone https://github.com/Vvkmnn/claude-historian.git
-cd claude-historian
-npm install
-
-# Build and test
-npm run build
+git clone https://github.com/vvkmnn/claude-historian && cd claude-historian
+npm install && npm run build
 npm test
-
-# Run linting and formatting
-npm run lint
-npm run format
 ```
 
-### Contributing
+Contributing:
 
-We welcome contributions! Please:
+- Please fork the repository and create feature branches
+- Test with large conversation histories before submitting PRs
+- Follow TypeScript strict mode and [MCP protocol](https://spec.modelcontextprotocol.io/) standards
 
-1. **Fork** the repository and create feature branches
-2. **Test** with large conversation histories before submitting PRs
-3. **Follow** TypeScript strict mode and [MCP protocol](https://spec.modelcontextprotocol.io/) standards
-4. **Run** the full test suite: `npm run lint && npm run format:check && npm test`
+Learn from examples:
 
-### CI/CD Pipeline
+- [Official MCP servers](https://github.com/modelcontextprotocol/servers) for reference implementations
+- [TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) for best practices
 
-- ✅ **Automated testing** on Node.js 18, 20, 22
-- 🔒 **Security scanning** with npm audit
-- 📦 **Semantic versioning** with automated releases
-- 🚀 **NPM publishing** via GitHub Actions
+## license
 
-## 📚 Learn More
-
-### Official Resources
-- [Model Context Protocol](https://modelcontextprotocol.io/) - Learn about MCP
-- [Claude Code Documentation](https://docs.anthropic.com/claude/code) - Official Claude CLI docs
-- [MCP Server Examples](https://github.com/modelcontextprotocol/servers) - Reference implementations
-- [TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) - Best practices
-
-### Community
-- 🐛 [Report Issues](https://github.com/Vvkmnn/claude-historian/issues)
-- 💡 [Request Features](https://github.com/Vvkmnn/claude-historian/issues/new)
-- 🤝 [Contributing Guide](CONTRIBUTING.md)
-- 📖 [Changelog](CHANGELOG.md)
-
-## 📄 License
-
-[MIT](LICENSE) © 2025 Claude Code Community
+[MIT](LICENSE)
 
 ---
 
-## 🎭 About the Name
-
 ![Claude Fauchet](https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Claude_Fauchet_par_Thomas_de_Leu.jpg/336px-Claude_Fauchet_par_Thomas_de_Leu.jpg)
 
-*Named after Claude Fauchet (1744-1793), French historian who pioneered systematic approaches to historical research and documentation.*
+_Claude Fauchet (1744-1793), French Historian_
