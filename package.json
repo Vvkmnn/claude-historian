@@ -1,7 +1,7 @@
 {
   "name": "claude-historian",
-  "version": "1.0.0",
-  "description": "Zero-install MCP server for intelligent Claude Code conversation history search with beautiful terminal output",
+  "version": "1.0.1",
+  "description": "an MCP server for Claude Code conversation history ",
   "type": "module",
   "bin": {
     "claude-historian": "./dist/index.js"
@@ -45,16 +45,16 @@
   ],
   "author": "Claude Code Community",
   "license": "MIT",
-  "homepage": "https://github.com/claude-code/claude-historian#readme",
+  "homepage": "https://github.com/Vvkmnn/claude-historian#readme",
   "bugs": {
-    "url": "https://github.com/claude-code/claude-historian/issues"
+    "url": "https://github.com/Vvkmnn/claude-historian/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/claude-code/claude-historian.git"
+    "url": "git+https://github.com/Vvkmnn/claude-historian.git"
   },
   "funding": {
     "type": "github",
-    "url": "https://github.com/sponsors/claude-code"
+    "url": "https://github.com/sponsors/Vvkmnn"
   }
 }

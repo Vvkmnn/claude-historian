@@ -59,3 +59,10 @@ coverage/
 # Temporary folders
 tmp/
 temp/
+
+# Claude Code configuration
+.claude/
+
+# Demo files
+demo.mov
+palette.png
