@@ -242,7 +242,10 @@ class ClaudeHistorianServer {
               content: [
                 {
                   type: 'text',
-                  text: this.formatter.formatErrorSolutions(errorSolutions, args?.error_pattern as string),
+                  text: this.formatter.formatErrorSolutions(
+                    errorSolutions,
+                    args?.error_pattern as string
+                  ),
                 },
               ],
             };
@@ -265,11 +268,11 @@ class ClaudeHistorianServer {
 
           case 'extract_compact_summary': {
             const sessionId = args?.session_id as string;
-            const maxMessages = args?.max_messages as number || 10;
-            
+            const maxMessages = (args?.max_messages as number) || 10;
+
             // Generate intelligent summary from recent tool usage and outcomes
             const summary = await this.generateSmartSummary(sessionId, maxMessages);
-            
+
             return {
               content: [
                 {
@@ -297,10 +300,7 @@ class ClaudeHistorianServer {
           }
 
           default:
-            throw new McpError(
-              ErrorCode.MethodNotFound,
-              `Unknown tool: ${name}`
-            );
+            throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
         }
       } catch (error) {
         console.error('Tool execution error:', error);
@@ -321,52 +321,64 @@ class ClaudeHistorianServer {
     try {
       // Search for recent activity related to the session
       const recentActivity = await this.searchEngine.searchConversations(
-        sessionId || 'recent tool usage outcomes', undefined, 'today', maxMessages
+        sessionId || 'recent tool usage outcomes',
+        undefined,
+        'today',
+        maxMessages
       );
-      
+
       if (!recentActivity.messages.length) {
         return `[⌐◉_◉] No recent activity found for session: ${sessionId}`;
       }
-      
+
       // Extract key information: tools used, files changed, outcomes
       const toolsUsed = new Set<string>();
       const filesReferenced = new Set<string>();
       const outcomes: string[] = [];
-      
-      recentActivity.messages.forEach(msg => {
+
+      recentActivity.messages.forEach((msg) => {
         // Collect tools used
-        msg.context?.toolsUsed?.forEach(tool => toolsUsed.add(tool));
-        
+        msg.context?.toolsUsed?.forEach((tool) => toolsUsed.add(tool));
+
         // Collect files referenced
-        msg.context?.filesReferenced?.forEach(file => filesReferenced.add(file));
-        
+        msg.context?.filesReferenced?.forEach((file) => filesReferenced.add(file));
+
         // Extract key outcomes from assistant messages
         if (msg.type === 'assistant' && msg.content.length > 100) {
-          const lines = msg.content.split('\n').filter(line => 
-            line.includes('✅') || line.includes('Fixed') || line.includes('Created') || 
-            line.includes('Updated') || line.includes('Completed')
-          );
+          const lines = msg.content
+            .split('\n')
+            .filter(
+              (line) =>
+                line.includes('✅') ||
+                line.includes('Fixed') ||
+                line.includes('Created') ||
+                line.includes('Updated') ||
+                line.includes('Completed')
+            );
           outcomes.push(...lines.slice(0, 2)); // Max 2 outcomes per message
         }
       });
-      
+
       // Generate compact summary
       let summary = `[⌐◉_◉] Smart Summary (${recentActivity.messages.length} messages)\n\n`;
-      
+
       if (toolsUsed.size > 0) {
         summary += `**Tools Used:** ${Array.from(toolsUsed).slice(0, 5).join(', ')}\n`;
       }
-      
+
       if (filesReferenced.size > 0) {
         summary += `**Files Modified:** ${Array.from(filesReferenced).slice(0, 3).join(', ')}\n`;
       }
-      
+
       if (outcomes.length > 0) {
-        summary += `**Key Outcomes:**\n${outcomes.slice(0, 3).map(o => `• ${o.replace(/[✅🔧]/g, '').trim()}`).join('\n')}\n`;
+        summary += `**Key Outcomes:**\n${outcomes
+          .slice(0, 3)
+          .map((o) => `• ${o.replace(/[✅🔧]/gu, '').trim()}`)
+          .join('\n')}\n`;
       }
-      
+
       summary += `\n**Duration:** ${Math.round(recentActivity.executionTime)}ms | **Relevance:** High`;
-      
+
       return summary;
     } catch (error) {
       return `[⌐◉_◉] Summary generation failed: ${error}`;
@@ -377,62 +389,70 @@ class ClaudeHistorianServer {
     try {
       // Get recent activity instead of just session metadata
       const recentActivity = await this.searchEngine.searchConversations(
-        'recent activity projects files tools', undefined, 'week', limit * 3
+        'recent activity projects files tools',
+        undefined,
+        'week',
+        limit * 3
       );
-      
+
       if (!recentActivity.messages.length) {
         return `[⌐○_○] No recent sessions found`;
       }
-      
+
       // Group by project and extract session info
-      const projectSessions = new Map<string, {
-        lastActivity: string;
-        messageCount: number;
-        toolsUsed: Set<string>;
-        filesModified: Set<string>;
-      }>();
-      
-      recentActivity.messages.forEach(msg => {
+      const projectSessions = new Map<
+        string,
+        {
+          lastActivity: string;
+          messageCount: number;
+          toolsUsed: Set<string>;
+          filesModified: Set<string>;
+        }
+      >();
+
+      recentActivity.messages.forEach((msg) => {
         const project = msg.projectPath || 'unknown';
         if (!projectSessions.has(project)) {
           projectSessions.set(project, {
             lastActivity: msg.timestamp || 'unknown',
             messageCount: 0,
             toolsUsed: new Set(),
-            filesModified: new Set()
+            filesModified: new Set(),
           });
         }
-        
+
         const session = projectSessions.get(project)!;
         session.messageCount++;
-        msg.context?.toolsUsed?.forEach(tool => session.toolsUsed.add(tool));
-        msg.context?.filesReferenced?.forEach(file => session.filesModified.add(file));
-        
+        msg.context?.toolsUsed?.forEach((tool) => session.toolsUsed.add(tool));
+        msg.context?.filesReferenced?.forEach((file) => session.filesModified.add(file));
+
         // Update to most recent activity
         if (msg.timestamp && msg.timestamp > session.lastActivity) {
           session.lastActivity = msg.timestamp;
         }
       });
-      
+
       // Format as smart session list
       let result = `[⌐○_○] Smart Sessions (${projectSessions.size} active projects)\n\n`;
-      
+
       const sortedProjects = Array.from(projectSessions.entries())
-        .sort(([,a], [,b]) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime())
+        .sort(
+          ([, a], [, b]) => new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
+        )
         .slice(0, limit);
-      
+
       sortedProjects.forEach(([project, session], index) => {
         const timeAgo = this.getTimeAgo(session.lastActivity);
         const toolsList = Array.from(session.toolsUsed).slice(0, 3).join(', ');
         const filesList = Array.from(session.filesModified).slice(0, 2).join(', ');
-        
+
         result += `${index + 1}. **${project}** - ${timeAgo}\n`;
         result += `   ${session.messageCount} messages`;
         if (toolsList) result += ` | Tools: ${toolsList}`;
         if (filesList) result += ` | Files: ${filesList}`;
         result += `\n\n`;
       });
-      
+
       return result;
     } catch (error) {
       return `[⌐○_○] Session listing failed: ${error}`;
@@ -446,7 +466,7 @@ class ClaudeHistorianServer {
       const diffMs = now.getTime() - then.getTime();
       const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
       const diffDays = Math.floor(diffHours / 24);
-      
+
       if (diffDays > 0) return `${diffDays}d ago`;
       if (diffHours > 0) return `${diffHours}h ago`;
       return 'Recent';
@@ -484,13 +504,19 @@ Configuration snippet for ~/.claude/.claude.json:
 }
 
 if (args.includes('--config')) {
-  console.log(JSON.stringify({
-    "claude-historian": {
-      "command": "npx",
-      "args": ["claude-historian"],
-      "env": {}
-    }
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        'claude-historian': {
+          command: 'npx',
+          args: ['claude-historian'],
+          env: {},
+        },
+      },
+      null,
+      2
+    )
+  );
   process.exit(0);
 }
 

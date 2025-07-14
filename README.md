@@ -4,23 +4,25 @@
 
 A Model Context Protocol (MCP) server for searching your Claude Code conversation history. Find past solutions, track file changes, and learn from previous work.
 
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![npm version](https://img.shields.io/npm/v/claude-historian.svg)](https://www.npmjs.com/package/claude-historian)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Vvkmnn/claude-historian?utm_source=oss&utm_medium=github&utm_campaign=Vvkmnn%2Fclaude-historian&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
 
 ## install
 
-Requirements: [Claude Code](https://claude.ai/code)
+Requirements:
+
+- [Claude Code](https://claude.ai/code)
+
+That's it. No `npm install` needed; thare are no external dependencies or local databases; only search algorithms.
 
 **From shell:**
 
 ```bash
 claude mcp add claude-historian -- npx claude-historian
 ```
-
-No `npm install` needed. No external dependencies. No security concerns.
 
 **From inside Claude** (restart required):
 
@@ -107,7 +109,7 @@ How claude-historian works ([source](https://github.com/Vvkmnn/claude-historian/
 **Pure streaming architecture using:**
 
 - **[JSON streaming parser](https://en.wikipedia.org/wiki/Streaming_JSON)**: Reads Claude Code conversation files on-demand without full deserialization
-- **[LRU caching](https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU))**: In-memory cache with intelligent eviction for frequently accessed conversations
+- **[LRU caching](<https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)>)**: In-memory cache with intelligent eviction for frequently accessed conversations
 - **[TF-IDF inspired scoring](https://en.wikipedia.org/wiki/Tf%E2%80%93idf)**: Term frequency scoring with document frequency weighting for relevance
 - **[Query classification](https://en.wikipedia.org/wiki/Text_classification)**: Naive Bayes-style classification (error/implementation/analysis/general) with adaptive limits
 - **[Edit distance](https://en.wikipedia.org/wiki/Edit_distance)**: Fuzzy matching for technical terms and typo tolerance
