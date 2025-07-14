@@ -1,0 +1,60 @@
+{
+  "name": "claude-historian",
+  "version": "1.0.0",
+  "description": "Zero-install MCP server for intelligent Claude Code conversation history search with beautiful terminal output",
+  "type": "module",
+  "bin": {
+    "claude-historian": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc && chmod +x dist/index.js",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "mcp",
+    "mcp-server",
+    "history",
+    "search",
+    "conversation",
+    "ai",
+    "terminal",
+    "cli",
+    "npx",
+    "zero-install"
+  ],
+  "author": "Claude Code Community",
+  "license": "MIT",
+  "homepage": "https://github.com/claude-code/claude-historian#readme",
+  "bugs": {
+    "url": "https://github.com/claude-code/claude-historian/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/claude-code/claude-historian.git"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/claude-code"
+  }
+}
