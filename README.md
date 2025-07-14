@@ -16,8 +16,6 @@ Requirements:
 
 - [Claude Code](https://claude.ai/code)
 
-That's it. No `npm install` needed; thare are no external dependencies or local databases; only search algorithms.
-
 **From shell:**
 
 ```bash
@@ -45,6 +43,9 @@ Install this mcp: https://github.com/Vvkmnn/claude-historian
   }
 }
 ```
+
+
+That's it. No `npm install` needed; there are no external dependencies or local databases, only search algorithms.
 
 ## features
 
