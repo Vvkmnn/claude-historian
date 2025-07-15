@@ -58,6 +58,24 @@ However, in the unlikely event that you pull the wrong package / `npx` registry 
 npm install -g claude-historian
 ```
 
+## troubleshooting
+
+**ERR_MODULE_NOT_FOUND** when using `npx claude-historian`:
+
+If you encounter an error like this when running `npx claude-historian`:
+
+```
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module '@modelcontextprotocol/sdk/dist/esm/server/index.js'
+```
+
+**Solution**: Install claude-historian globally instead:
+
+```bash
+npm i -g claude-historian
+```
+
+This resolves module resolution issues that can occur with `npx` in certain environments. The global installation ensures all dependencies are properly resolved.
+
 ## features
 
 [MCP server](https://modelcontextprotocol.io/) that gives Claude access to your conversation history. Fast search with smart prioritization.
