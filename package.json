@@ -54,7 +54,11 @@
     "terminal",
     "cli",
     "npx",
-    "zero-install"
+    "zero-install",
+    "anthropic",
+    "llm",
+    "developer-tools",
+    "productivity"
   ],
   "author": "Claude Code Community",
   "license": "MIT",
@@ -69,5 +73,9 @@
   "funding": {
     "type": "github",
     "url": "https://github.com/sponsors/Vvkmnn"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   }
 }

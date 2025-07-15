@@ -19,6 +19,7 @@ jobs:
       issues: write
       pull-requests: write
       id-token: write
+      attestations: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,6 +31,7 @@ jobs:
         with:
           node-version: 'lts/*'
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org/'
 
       - name: Install dependencies
         run: npm clean-install
@@ -47,4 +49,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npx semantic-release -- --npm-publish-provenance

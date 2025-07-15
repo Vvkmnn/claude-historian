@@ -4,7 +4,7 @@
 
 ![claude-historian](demo.gif)
 
-A Model Context Protocol (MCP) server for searching your Claude Code conversation history. Find past solutions, track file changes, and learn from previous work.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for searching your [Claude Code](https://docs.anthropic.com/en/docs/claude-code) conversation history. Find past solutions, track file changes, and learn from previous work.
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![npm version](https://img.shields.io/npm/v/claude-historian.svg)](https://www.npmjs.com/package/claude-historian)
@@ -17,6 +17,10 @@ A Model Context Protocol (MCP) server for searching your Claude Code conversatio
 Requirements:
 
 - [Claude Code](https://claude.ai/code)
+
+```bash
+npm install -g claude-historian # warning; may panic if not installed with npx first
+```
 
 **From shell:**
 
@@ -46,8 +50,13 @@ Install this mcp: https://github.com/Vvkmnn/claude-historian
 }
 ```
 
+That's it; there is **no `npm install` required** as there are no external dependencies or local databases, only search algorithms.
 
-That's it. No `npm install` needed; there are no external dependencies or local databases, only search algorithms.
+However, in the unlikely event that you pull the wrong package / `npx` registry is out of date, you can force a global install with:
+
+```bash
+npm install -g claude-historian
+```
 
 ## features
 
@@ -89,19 +98,19 @@ Runs locally (with cool shades `[⌐■_■]`):
 
 ## methodology
 
-How claude-historian works ([source](https://github.com/Vvkmnn/claude-historian/tree/main/src)):
+How [claude-historian](https://github.com/Vvkmnn/claude-historian) [works](https://github.com/Vvkmnn/claude-historian/tree/master/src):
 
 ```
 "docker auth" query
       |
-      ├─> Classify: implementation query -> boost tool examples
+      ├─> Classify (search.ts:classifyQueryType): implementation → boost tool examples
       |
-      ├─> Stream & Filter:
-      |   • Summary messages -> priority queue *****
-      |   • Tool usage context -> high value ****
-      |   • Error solutions -> targeted ***
+      ├─> Stream & Filter (search.ts:streamingSearch):
+      |   • Summary messages (search.ts:isSummaryMessage) → priority queue *****
+      |   • Tool usage context (search.ts:isHighValueMessage) → high value ****
+      |   • Error solutions (parser.ts:extractContext) → targeted ***
       |
-      ├─> Smart Ranking:
+      ├─> Smart Ranking (search.ts:prioritizeResultsForClaudeCode):
       |   • "Fixed Docker auth with Read tool" (2h ago) *****
       |   • "OAuth implementation approach" (yesterday) ****
       |   • "Container auth debug" (last week) ***
@@ -109,14 +118,23 @@ How claude-historian works ([source](https://github.com/Vvkmnn/claude-historian/
       └─> Return Claude Code optimized results
 ```
 
-**Pure streaming architecture using:**
+**Function references:**
 
-- **[JSON streaming parser](https://en.wikipedia.org/wiki/Streaming_JSON)**: Reads Claude Code conversation files on-demand without full deserialization
-- **[LRU caching](<https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)>)**: In-memory cache with intelligent eviction for frequently accessed conversations
-- **[TF-IDF inspired scoring](https://en.wikipedia.org/wiki/Tf%E2%80%93idf)**: Term frequency scoring with document frequency weighting for relevance
-- **[Query classification](https://en.wikipedia.org/wiki/Text_classification)**: Naive Bayes-style classification (error/implementation/analysis/general) with adaptive limits
-- **[Edit distance](https://en.wikipedia.org/wiki/Edit_distance)**: Fuzzy matching for technical terms and typo tolerance
-- **[Exponential time decay](https://en.wikipedia.org/wiki/Exponential_decay)**: Recent messages weighted higher with configurable half-life
+- [classifyQueryType](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L294): Query classification (error/implementation/analysis/general)
+- [streamingSearch](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L53): Main streaming search algorithm
+- [isSummaryMessage](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L161): Detects conversation summaries
+- [isHighValueMessage](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L182): Identifies tool usage and solutions
+- [extractContext](https://github.com/Vvkmnn/claude-historian/blob/master/src/parser.ts#L74): Extracts file references, tools, and errors
+- [prioritizeResultsForClaudeCode](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L213): Intelligent result ranking
+
+**Streaming architecture using:**
+
+- **[JSON streaming parser](https://en.wikipedia.org/wiki/JSON_streaming)** ([parseJsonlFile](https://github.com/Vvkmnn/claude-historian/blob/master/src/parser.ts#L16)): Reads Claude Code conversation files on-demand without full deserialization
+- **[LRU caching](<https://en.wikipedia.org/wiki/Cache_replacement_policies#Least_recently_used_(LRU)>)** ([messageCache](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L88)): In-memory cache with intelligent eviction for frequently accessed conversations
+- **[TF-IDF inspired scoring](https://en.wikipedia.org/wiki/Tf%E2%80%93idf)** ([calculateRelevanceScore](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L356)): Term frequency scoring with document frequency weighting for relevance
+- **[Query classification](https://en.wikipedia.org/wiki/Text_classification)** ([classifyQueryType](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L294)): Naive Bayes-style classification (error/implementation/analysis/general) with adaptive limits
+- **[Edit distance](https://en.wikipedia.org/wiki/Edit_distance)** ([calculateQuerySimilarity](https://github.com/Vvkmnn/claude-historian/blob/master/src/search-helpers.ts#L19)): Fuzzy matching for technical terms and typo tolerance
+- **[Exponential time decay](https://en.wikipedia.org/wiki/Exponential_decay)** (utils.ts:getTimeRangeFilter): Recent messages weighted higher with configurable half-life
 
 **File access:**
 
@@ -132,16 +150,34 @@ npm install && npm run build
 npm test
 ```
 
+**Package requirements:**
+
+- **Node.js**: >=20.0.0 (ES modules support)
+- **npm**: >=10.0.0 (package-lock v3)
+- **Runtime**: Only `@modelcontextprotocol/sdk` dependency
+- **Zero external dependencies** for production deployment
+
+**Development workflow:**
+
+```bash
+npm run dev            # Watch mode with tsc --watch
+npm run lint           # ESLint code quality checks
+npm run format         # Prettier formatting
+npm run type-check     # TypeScript validation without emit
+npm run prepublishOnly # Pre-publish validation (build + lint + format)
+```
+
 Contributing:
 
 - Please fork the repository and create feature branches
 - Test with large conversation histories before submitting PRs
-- Follow TypeScript strict mode and [MCP protocol](https://spec.modelcontextprotocol.io/) standards
+- Follow TypeScript strict mode and [MCP protocol](https://modelcontextprotocol.io/specification) standards
 
 Learn from examples:
 
 - [Official MCP servers](https://github.com/modelcontextprotocol/servers) for reference implementations
 - [TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) for best practices
+- [Creating Node.js modules](https://docs.npmjs.com/creating-node-js-modules) - NPM package development guide
 
 ## license
 
