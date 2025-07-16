@@ -66,3 +66,6 @@ temp/
 # Demo files
 demo.mov
 palette.png
+
+# Development documentation
+CLAUDE.md

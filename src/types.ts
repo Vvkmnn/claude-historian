@@ -31,10 +31,14 @@ export interface CompactMessage {
   sessionId: string;
   projectPath?: string;
   relevanceScore?: number;
+  finalScore?: number; // For enhanced scoring calculations
   context?: {
     filesReferenced?: string[];
     toolsUsed?: string[];
     errorPatterns?: string[];
+    claudeInsights?: string[];  // Solutions, explanations from Claude
+    codeSnippets?: string[];    // Code blocks and snippets  
+    actionItems?: string[];     // Next steps and actions
   };
 }
 
@@ -50,6 +54,11 @@ export interface FileContext {
   lastModified: string;
   relatedMessages: CompactMessage[];
   operationType: 'read' | 'write' | 'edit' | 'delete';
+  changeFrequency?: number;
+  impactLevel?: 'low' | 'medium' | 'high';
+  affectedSystems?: string[];
+  timeline?: any[];
+  insights?: string[];
 }
 
 export interface ErrorSolution {
@@ -57,6 +66,12 @@ export interface ErrorSolution {
   solution: CompactMessage[];
   context: string;
   frequency: number;
+  successRate?: number;
+  averageResolutionTime?: number;
+  rootCauses?: string[];
+  preventionStrategies?: string[];
+  riskLevel?: 'low' | 'medium' | 'high';
+  intelligentInsights?: string[];
 }
 
 export interface ToolPattern {
@@ -64,6 +79,10 @@ export interface ToolPattern {
   successfulUsages: CompactMessage[];
   commonPatterns: string[];
   bestPractices: string[];
+  workflowSequences?: any[];
+  successRate?: number;
+  averageTime?: number;
+  intelligentInsights?: string[];
 }
 
 export interface ConversationSession {
