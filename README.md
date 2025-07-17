@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vvkmnn-claude-historian-badge.png)](https://mseep.ai/app/vvkmnn-claude-historian)
+
 # claude-historian
 
 ![claude-historian](demo.gif)
