@@ -48,7 +48,7 @@ export class UniversalHistorySearchEngine {
   async initialize(): Promise<void> {
     await this.detectLevelDB();
     this.claudeDesktopAvailable = await detectClaudeDesktop();
-
+    
     if (this.claudeDesktopAvailable) {
       this.desktopStoragePath = await getClaudeDesktopStoragePath();
       this.desktopIndexedDBPath = await getClaudeDesktopIndexedDBPath();
@@ -85,10 +85,10 @@ export class UniversalHistorySearchEngine {
     );
 
     const combinedResults = this.combineSearchResults(claudeCodeResults, desktopMessages);
-
+    
     // Only mark as enhanced if we actually found Desktop data
     const hasDesktopData = desktopMessages.length > 0;
-
+    
     return {
       source: hasDesktopData ? 'claude-desktop' : 'claude-code',
       results: combinedResults,
@@ -116,17 +116,17 @@ export class UniversalHistorySearchEngine {
       // Try Local Storage data first (where actual conversation text is found)
       const localStorageResults = await this.searchLocalStorageData(query, timeframe, limit);
       results.push(...localStorageResults);
-
+      
       // Try SQLite WebStorage for additional metadata
       if (this.sqlite3) {
         const sqliteResults = await this.searchSQLiteWebStorage(query, timeframe, limit);
         results.push(...sqliteResults);
       }
-
+      
       // Try both IndexedDB and Local Storage LevelDB locations
       const indexedDBResults = await this.searchIndexedDBWithMicroCopy(query, timeframe, limit);
       results.push(...indexedDBResults);
-
+      
       const levelDBResults = await this.searchLocalStorageWithMicroCopy(query, timeframe, limit);
       results.push(...levelDBResults);
     } catch (error) {
@@ -158,13 +158,13 @@ export class UniversalHistorySearchEngine {
       }
 
       const files = readdirSync(localStoragePath);
-
+      
       for (const file of files) {
         if (file.endsWith('.ldb') || file.endsWith('.log')) {
           const filePath = join(localStoragePath, file);
           const content = readFileSync(filePath);
           const textContent = content.toString('utf8').replace(/\x00/g, '');
-
+          
           // Search for conversation content that matches our query
           if (textContent.toLowerCase().includes(queryLower)) {
             // Look for text around the query match
@@ -172,10 +172,10 @@ export class UniversalHistorySearchEngine {
             const start = Math.max(0, queryIndex - 200);
             const end = Math.min(textContent.length, queryIndex + 300);
             const snippet = textContent.substring(start, end);
-
+            
             // Enhanced Desktop content extraction
             const cleanSnippet = this.extractCleanDesktopContent(snippet, query);
-
+            
             if (cleanSnippet && cleanSnippet.length > 30) {
               const message: CompactMessage = {
                 uuid: `desktop-local-${Date.now()}-${Math.random()}`,
@@ -194,14 +194,14 @@ export class UniversalHistorySearchEngine {
                   actionItems: this.extractActionItems({ content: cleanSnippet })
                 }
               };
-
+              
               results.push(message);
             }
           }
-
+          
           // Also extract LSS (Local Storage Store) entries for structured data
           const lssMatches = textContent.match(/LSS-[^:]+:[^}]+/g) || [];
-
+          
           for (const lssEntry of lssMatches) {
             try {
               // Parse conversation data from LSS entries
@@ -231,7 +231,7 @@ export class UniversalHistorySearchEngine {
                                 actionItems: this.extractActionItems({ content: textItem.text })
                               }
                             };
-
+                            
                             results.push(message);
                           }
                         }
@@ -259,7 +259,7 @@ export class UniversalHistorySearchEngine {
     try {
       const path = require('path');
       const os = require('os');
-
+      
       switch (process.platform) {
         case 'darwin':
           return path.join(os.homedir(), 'Library/Application Support/Claude/Local Storage/leveldb');
@@ -296,18 +296,18 @@ export class UniversalHistorySearchEngine {
 
       // Look for SQLite databases in WebStorage/QuotaManager
       const quotaManagerPath = join(webStoragePath, 'QuotaManager');
-
+      
       // Copy the database to a temporary location to avoid lock issues
       let tempDir: string | null = null;
       let db: any = null;
-
+      
       try {
         tempDir = await mkdtemp(join(require('os').tmpdir(), 'claude-historian-sqlite-'));
         await chmod(tempDir, 0o700);
-
+        
         const sourceDbPath = quotaManagerPath;
         const tempDbPath = join(tempDir, 'temp-quota.db');
-
+        
         // Check if source database exists
         try {
           await import('fs').then(fs => fs.promises.access(sourceDbPath, fs.constants.F_OK));
@@ -317,7 +317,7 @@ export class UniversalHistorySearchEngine {
 
         // Copy database to temporary location
         await copyFile(sourceDbPath, tempDbPath);
-
+        
         // Try to copy journal file too if it exists
         try {
           await copyFile(sourceDbPath + '-journal', tempDbPath + '-journal');
@@ -325,7 +325,7 @@ export class UniversalHistorySearchEngine {
           // Journal file might not exist, that's okay
         }
 
-        db = new this.sqlite3(tempDbPath, {
+        db = new this.sqlite3(tempDbPath, { 
           readonly: true,
           timeout: 1000
         });
@@ -333,13 +333,13 @@ export class UniversalHistorySearchEngine {
       // Query the database for conversation data
       // Claude Desktop typically stores data in 'messages' or 'conversations' tables
       const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
-
+      
       for (const table of tables) {
         try {
           // Look for text content in each table
           const columns = db.prepare(`PRAGMA table_info(${table.name})`).all();
-          const textColumns = columns.filter((col: any) =>
-            col.type.toLowerCase().includes('text') ||
+          const textColumns = columns.filter((col: any) => 
+            col.type.toLowerCase().includes('text') || 
             col.type.toLowerCase().includes('varchar') ||
             col.name.toLowerCase().includes('content') ||
             col.name.toLowerCase().includes('message') ||
@@ -352,7 +352,7 @@ export class UniversalHistorySearchEngine {
               try {
                 const searchQuery = `SELECT * FROM ${table.name} WHERE ${col.name} LIKE ? COLLATE NOCASE LIMIT ?`;
                 const rows = db.prepare(searchQuery).all(`%${query}%`, limit || 10);
-
+                
                 for (const row of rows) {
                   const content = row[col.name];
                   if (content && typeof content === 'string' && content.toLowerCase().includes(queryLower)) {
@@ -373,9 +373,9 @@ export class UniversalHistorySearchEngine {
                         actionItems: this.extractActionItems({ content })
                       }
                     };
-
+                    
                     results.push(message);
-
+                    
                     if (results.length >= (limit || 10)) {
                       break;
                     }
@@ -397,14 +397,14 @@ export class UniversalHistorySearchEngine {
       } catch (copyError) {
         // If copy fails, try direct read-only access as fallback
         try {
-          db = new this.sqlite3(quotaManagerPath, {
+          db = new this.sqlite3(quotaManagerPath, { 
             readonly: true,
             timeout: 100 // Very short timeout for fallback
           });
-
+          
           const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
           // ... same search logic here but simplified for fallback
-
+          
           db.close();
         } catch (directError) {
           // Both copy and direct access failed
@@ -420,7 +420,7 @@ export class UniversalHistorySearchEngine {
           }
         }
       }
-
+      
     } catch (error) {
       // Silent failure for any other issues
       return [];
@@ -433,7 +433,7 @@ export class UniversalHistorySearchEngine {
     try {
       const { join } = require('path');
       const { homedir } = require('os');
-
+      
       switch (process.platform) {
         case 'darwin':
           return join(homedir(), 'Library/Application Support/Claude/WebStorage');
@@ -459,7 +459,7 @@ export class UniversalHistorySearchEngine {
     }
 
     let tempDir: string | null = null;
-
+    
     try {
       // Create secure temp directory
       tempDir = await mkdtemp(join(tmpdir(), 'claude-historian-'));
@@ -471,14 +471,14 @@ export class UniversalHistorySearchEngine {
       // Micro-copy: only copy .log files (active data, ~2KB vs 48KB total)
       const sourceFiles = await readdir(sourceDbPath);
       const logFiles = sourceFiles.filter(file => file.endsWith('.log'));
-
+      
       if (logFiles.length === 0) {
         return [];
       }
 
       // Silent timeout protection - max 100ms for copy operation
       const copyPromise = this.copyLogFiles(sourceDbPath, tempDbPath, logFiles);
-      const timeoutPromise = new Promise<void>((_, reject) =>
+      const timeoutPromise = new Promise<void>((_, reject) => 
         setTimeout(() => reject(new Error('Timeout')), 100)
       );
 
@@ -486,7 +486,7 @@ export class UniversalHistorySearchEngine {
 
       // Fast text search in copied log files (no LevelDB parsing needed)
       const results = await this.searchLogFiles(tempDbPath, query, timeframe, limit);
-
+      
       return results;
     } catch (error) {
       // Silent failure for performance
@@ -506,10 +506,10 @@ export class UniversalHistorySearchEngine {
   private async copyLogFiles(sourcePath: string, destPath: string, logFiles: string[]): Promise<void> {
     // Copy all available files for better search coverage
     const allFiles = await readdir(sourcePath);
-    const filesToCopy = allFiles.filter(file =>
+    const filesToCopy = allFiles.filter(file => 
       file.endsWith('.log') || file.endsWith('.ldb') || file === 'CURRENT'
     ).slice(0, 5); // Limit to 5 most relevant files
-
+    
     for (const file of filesToCopy) {
       const sourceFile = join(sourcePath, file);
       const destFile = join(destPath, file);
@@ -533,7 +533,7 @@ export class UniversalHistorySearchEngine {
           // Read as binary first to handle LevelDB format
           const buffer = await readFile(join(dbPath, file));
           const content = buffer.toString('utf8', 0, Math.min(buffer.length, 50000)); // Limit to prevent massive content
-
+          
           // Search for text content in the binary data
           if (content.toLowerCase().includes(queryLower)) {
             const message: CompactMessage = {
@@ -553,9 +553,9 @@ export class UniversalHistorySearchEngine {
                 actionItems: []
               }
             };
-
+            
             results.push(message);
-
+            
             if (results.length >= (limit || 10)) {
               break;
             }
@@ -573,10 +573,10 @@ export class UniversalHistorySearchEngine {
     // Extract relevant snippet around query match
     const queryIndex = content.toLowerCase().indexOf(query.toLowerCase());
     if (queryIndex === -1) return content.slice(0, 200);
-
+    
     const start = Math.max(0, queryIndex - 100);
     const end = Math.min(content.length, queryIndex + 100);
-
+    
     return content.slice(start, end);
   }
 
@@ -590,7 +590,7 @@ export class UniversalHistorySearchEngine {
     }
 
     let tempDir: string | null = null;
-
+    
     try {
       // Create secure temp directory
       tempDir = await mkdtemp(join(tmpdir(), 'claude-historian-local-'));
@@ -601,17 +601,17 @@ export class UniversalHistorySearchEngine {
 
       // Copy Local Storage LevelDB files
       const sourceFiles = await readdir(sourceDbPath);
-      const filesToCopy = sourceFiles.filter(file =>
+      const filesToCopy = sourceFiles.filter(file => 
         file.endsWith('.log') || file.endsWith('.ldb') || file === 'CURRENT'
       ).slice(0, 5);
-
+      
       if (filesToCopy.length === 0) {
         return [];
       }
 
       // Silent timeout protection - max 100ms for copy operation
       const copyPromise = this.copyLocalStorageFiles(sourceDbPath, tempDbPath, filesToCopy);
-      const timeoutPromise = new Promise<void>((_, reject) =>
+      const timeoutPromise = new Promise<void>((_, reject) => 
         setTimeout(() => reject(new Error('Timeout')), 100)
       );
 
@@ -619,7 +619,7 @@ export class UniversalHistorySearchEngine {
 
       // Search in Local Storage files
       const results = await this.searchLocalStorageFiles(tempDbPath, query, timeframe, limit);
-
+      
       return results;
     } catch (error) {
       // Silent failure
@@ -659,7 +659,7 @@ export class UniversalHistorySearchEngine {
         if (file.endsWith('.log') || file.endsWith('.ldb')) {
           const buffer = await readFile(join(dbPath, file));
           const content = buffer.toString('utf8', 0, Math.min(buffer.length, 50000));
-
+          
           // Look for conversation content in the Local Storage format
           if (content.toLowerCase().includes(queryLower)) {
             const message: CompactMessage = {
@@ -679,9 +679,9 @@ export class UniversalHistorySearchEngine {
                 actionItems: []
               }
             };
-
+            
             results.push(message);
-
+            
             if (results.length >= (limit || 10)) {
               break;
             }
@@ -710,9 +710,9 @@ export class UniversalHistorySearchEngine {
         if (entry.startsWith('leveldb_')) {
           const entryPath = join(this.desktopStoragePath, entry);
           const conversations = await this.extractConversationsFromFile(entryPath);
-
+          
           for (const conversation of conversations) {
-            if (this.matchesQuery(conversation, query) &&
+            if (this.matchesQuery(conversation, query) && 
                 this.matchesTimeframe(conversation, timeframe)) {
               results.push({
                 ...conversation,
@@ -746,9 +746,9 @@ export class UniversalHistorySearchEngine {
         if (entry.includes('claude')) {
           const entryPath = join(this.desktopIndexedDBPath, entry);
           const conversations = await this.extractConversationsFromFile(entryPath);
-
+          
           for (const conversation of conversations) {
-            if (this.matchesQuery(conversation, query) &&
+            if (this.matchesQuery(conversation, query) && 
                 this.matchesTimeframe(conversation, timeframe)) {
               results.push({
                 ...conversation,
@@ -770,10 +770,10 @@ export class UniversalHistorySearchEngine {
   private async extractConversationsFromFile(filePath: string): Promise<any[]> {
     try {
       const content = await readFile(filePath, 'utf8');
-
+      
       const conversations: any[] = [];
       const lines = content.split('\n');
-
+      
       for (const line of lines) {
         if (line.trim()) {
           try {
@@ -795,7 +795,7 @@ export class UniversalHistorySearchEngine {
           }
         }
       }
-
+      
       return conversations;
     } catch (error) {
       console.error(`Error extracting from file ${filePath}:`, error);
@@ -815,17 +815,17 @@ export class UniversalHistorySearchEngine {
     try {
       const dbPath = join(this.desktopIndexedDBPath, 'https_claude.ai_0.indexeddb.leveldb');
       const db = new this.levelDB(dbPath, { readOnly: true });
-
+      
       const conversations: CompactMessage[] = [];
-
+      
       // Read entries from the LevelDB database
       const entries = await db.iterator({ limit: 100 }).all();
-
+      
       for (const [key, value] of entries) {
         try {
           const keyStr = key.toString();
           const valueStr = value.toString();
-
+          
           // Parse conversation data from LevelDB entries
           if (this.isConversationEntry(keyStr, valueStr)) {
             const message = await this.parseConversationEntry(keyStr, valueStr, query, timeframe);
@@ -838,9 +838,9 @@ export class UniversalHistorySearchEngine {
           continue;
         }
       }
-
+      
       await db.close();
-
+      
       return conversations.slice(0, limit || 10);
     } catch (error: unknown) {
       if (error && typeof error === 'object' && 'code' in error && error.code === 'LEVEL_LOCKED') {
@@ -868,17 +868,17 @@ export class UniversalHistorySearchEngine {
     try {
       const dbPath = join(this.desktopStoragePath, 'leveldb');
       const db = this.levelDB(dbPath, { readOnly: true });
-
+      
       const conversations: CompactMessage[] = [];
-
+      
       // Read all entries from the Local Storage LevelDB
       const iterator = db.iterator();
-
+      
       for await (const [key, value] of iterator) {
         try {
           const keyStr = key.toString();
           const valueStr = value.toString();
-
+          
           // Parse local storage data for conversation references
           if (this.isLocalStorageConversationEntry(keyStr, valueStr)) {
             const message = await this.parseLocalStorageEntry(keyStr, valueStr, query, timeframe);
@@ -891,10 +891,10 @@ export class UniversalHistorySearchEngine {
           continue;
         }
       }
-
+      
       await iterator.close();
       await db.close();
-
+      
       return conversations.slice(0, limit || 10);
     } catch (error) {
       console.error('Error reading Local Storage with Level:', error);
@@ -904,7 +904,7 @@ export class UniversalHistorySearchEngine {
 
   private isConversationEntry(key: string, value: string): boolean {
     // Check if this LevelDB entry contains conversation data
-    return value.includes('conversation') ||
+    return value.includes('conversation') || 
            value.includes('message') ||
            value.includes('assistant') ||
            value.includes('user') ||
@@ -914,7 +914,7 @@ export class UniversalHistorySearchEngine {
 
   private isLocalStorageConversationEntry(key: string, value: string): boolean {
     // Check if this Local Storage entry contains conversation references
-    return key.includes('conversation') ||
+    return key.includes('conversation') || 
            key.includes('chat') ||
            value.includes('message') ||
            value.includes('assistant');
@@ -1014,20 +1014,20 @@ export class UniversalHistorySearchEngine {
 
   private matchesQuery(conversation: any, query: string): boolean {
     if (!query) return true;
-
+    
     const content = JSON.stringify(conversation).toLowerCase();
     const queryLower = query.toLowerCase();
-
-    return content.includes(queryLower) ||
+    
+    return content.includes(queryLower) || 
            queryLower.split(' ').some(word => content.includes(word));
   }
 
   private matchesTimeframe(conversation: any, timeframe?: string): boolean {
     if (!timeframe || !conversation.timestamp) return true;
-
+    
     const messageDate = new Date(conversation.timestamp);
     const now = new Date();
-
+    
     switch (timeframe.toLowerCase()) {
       case 'today':
         return messageDate.toDateString() === now.toDateString();
@@ -1042,17 +1042,17 @@ export class UniversalHistorySearchEngine {
 
   private combineSearchResults(claudeCodeResults: SearchResult, desktopMessages: CompactMessage[]): SearchResult {
     const combinedMessages = [...claudeCodeResults.messages, ...desktopMessages];
-
+    
     combinedMessages.sort((a, b) => {
       const aScore = a.relevanceScore || 0;
       const bScore = b.relevanceScore || 0;
       if (aScore !== bScore) return bScore - aScore;
-
+      
       const aTime = new Date(a.timestamp || 0).getTime();
       const bTime = new Date(b.timestamp || 0).getTime();
       return bTime - aTime;
     });
-
+    
     return {
       messages: combinedMessages,
       totalResults: claudeCodeResults.totalResults + desktopMessages.length,
@@ -1084,9 +1084,9 @@ export class UniversalHistorySearchEngine {
     );
 
     const combinedResults = this.combineFileContextResults(claudeCodeResults, desktopMessages);
-
+    
     const hasDesktopData = desktopMessages.length > 0;
-
+    
     return {
       source: hasDesktopData ? 'claude-desktop' : 'claude-code',
       results: combinedResults,
@@ -1101,7 +1101,7 @@ export class UniversalHistorySearchEngine {
       relatedMessages: [msg],
       operationType: 'read' as const
     }));
-
+    
     return [...claudeCodeResults, ...desktopFileContexts];
   }
 
@@ -1128,9 +1128,9 @@ export class UniversalHistorySearchEngine {
     );
 
     const combinedResults = [...claudeCodeResults, ...desktopMessages];
-
+    
     const hasDesktopData = desktopMessages.length > 0;
-
+    
     return {
       source: hasDesktopData ? 'claude-desktop' : 'claude-code',
       results: combinedResults,
@@ -1161,9 +1161,9 @@ export class UniversalHistorySearchEngine {
     );
 
     const combinedResults = this.combineErrorSolutionResults(claudeCodeResults, desktopMessages);
-
+    
     const hasDesktopData = desktopMessages.length > 0;
-
+    
     return {
       source: hasDesktopData ? 'claude-desktop' : 'claude-code',
       results: combinedResults,
@@ -1178,7 +1178,7 @@ export class UniversalHistorySearchEngine {
       context: msg.content,
       frequency: 1
     }));
-
+    
     return [...claudeCodeResults, ...desktopErrorSolutions];
   }
 
@@ -1214,50 +1214,50 @@ export class UniversalHistorySearchEngine {
   private calculateRelevanceScore(data: any, query: string): number {
     const content = this.extractMessageContent(data).toLowerCase();
     const queryLower = query.toLowerCase();
-
+    
     let score = 0;
-
+    
     // Exact match bonus
     if (content.includes(queryLower)) score += 10;
-
+    
     // Word matching
     const queryWords = queryLower.split(/\s+/);
     const matchingWords = queryWords.filter(word => content.includes(word));
     score += matchingWords.length * 2;
-
+    
     // Special bonuses for Desktop conversations
     if (content.includes('sketchybar')) score += 5;
     if (content.includes('analog clock')) score += 5;
     if (content.includes('script')) score += 3;
-
+    
     return score;
   }
 
   private extractFileReferences(data: any): string[] {
     const content = this.extractMessageContent(data);
     const fileRefs: string[] = [];
-
+    
     // Common file patterns
     const patterns = [
       /\b[\w-]+\.(js|ts|py|json|md|txt|sh|yml|yaml)\b/g,
       /\/[\w-/]+\.[\w]+/g,
       /~\/[\w-/]+\.[\w]+/g
     ];
-
+    
     patterns.forEach(pattern => {
       const matches = content.match(pattern);
       if (matches) {
         fileRefs.push(...matches);
       }
     });
-
+    
     return [...new Set(fileRefs)];
   }
 
   private extractToolUsages(data: any): string[] {
     const content = this.extractMessageContent(data);
     const tools: string[] = [];
-
+    
     // Tool usage patterns
     const toolPatterns = [
       /\[Tool:\s*([^\]]+)\]/g,
@@ -1265,21 +1265,21 @@ export class UniversalHistorySearchEngine {
       /create_text_file/g,
       /Tool Result/g
     ];
-
+    
     toolPatterns.forEach(pattern => {
       const matches = content.match(pattern);
       if (matches) {
         tools.push(...matches);
       }
     });
-
+    
     return [...new Set(tools)];
   }
 
   private extractErrorPatterns(data: any): string[] {
     const content = this.extractMessageContent(data);
     const errors: string[] = [];
-
+    
     // Error patterns
     const errorPatterns = [
       /Error:[^\n]*/g,
@@ -1287,21 +1287,21 @@ export class UniversalHistorySearchEngine {
       /Failed[^\n]*/g,
       /Cannot[^\n]*/g
     ];
-
+    
     errorPatterns.forEach(pattern => {
       const matches = content.match(pattern);
       if (matches) {
         errors.push(...matches);
       }
     });
-
+    
     return [...new Set(errors)];
   }
 
   private extractClaudeInsights(data: any): string[] {
     const content = this.extractMessageContent(data);
     const insights: string[] = [];
-
+    
     // Claude insight patterns
     const insightPatterns = [
       /I'll[^\n]*/g,
@@ -1309,21 +1309,21 @@ export class UniversalHistorySearchEngine {
       /Here's[^\n]*/g,
       /Solution:[^\n]*/g
     ];
-
+    
     insightPatterns.forEach(pattern => {
       const matches = content.match(pattern);
       if (matches) {
         insights.push(...matches.slice(0, 3)); // Limit to avoid spam
       }
     });
-
+    
     return [...new Set(insights)];
   }
 
   private extractCodeSnippets(data: any): string[] {
     const content = this.extractMessageContent(data);
     const snippets: string[] = [];
-
+    
     // Code block patterns
     const codePatterns = [
       /```[\s\S]*?```/g,
@@ -1331,21 +1331,21 @@ export class UniversalHistorySearchEngine {
       /function\s+\w+\s*\([^)]*\)/g,
       /const\s+\w+\s*=/g
     ];
-
+    
     codePatterns.forEach(pattern => {
       const matches = content.match(pattern);
       if (matches) {
         snippets.push(...matches.slice(0, 2)); // Limit to avoid spam
       }
     });
-
+    
     return [...new Set(snippets)];
   }
 
   private extractActionItems(data: any): string[] {
     const content = this.extractMessageContent(data);
     const actions: string[] = [];
-
+    
     // Action item patterns
     const actionPatterns = [
       /TODO:[^\n]*/g,
@@ -1353,14 +1353,14 @@ export class UniversalHistorySearchEngine {
       /Action:[^\n]*/g,
       /Step \d+:[^\n]*/g
     ];
-
+    
     actionPatterns.forEach(pattern => {
       const matches = content.match(pattern);
       if (matches) {
         actions.push(...matches);
       }
     });
-
+    
     return [...new Set(actions)];
   }
 
@@ -1414,8 +1414,8 @@ export class UniversalHistorySearchEngine {
 
     // Get session data from Claude Code
     const allSessions = await this.claudeCodeEngine.getRecentSessions(20);
-    const sessionData = allSessions.find(s =>
-      s.session_id === sessionId ||
+    const sessionData = allSessions.find(s => 
+      s.session_id === sessionId || 
       s.session_id.startsWith(sessionId) ||
       sessionId.includes(s.session_id) ||
       s.session_id.includes(sessionId.replace(/^.*\//, ''))
@@ -1523,22 +1523,22 @@ export class UniversalHistorySearchEngine {
     try {
       // Remove binary junk and extract readable sentences
       let cleaned = rawSnippet.replace(/[^\x20-\x7E\n]/g, ' ');
-
+      
       // Extract sentences that contain the query or are near it
       const sentences = cleaned.split(/[.!?]+/).filter(s => s.trim().length > 10);
       const queryLower = query.toLowerCase();
-
+      
       // Find sentences containing the query
-      const relevantSentences = sentences.filter(sentence =>
+      const relevantSentences = sentences.filter(sentence => 
         sentence.toLowerCase().includes(queryLower)
       );
-
+      
       if (relevantSentences.length > 0) {
         // Get the best sentence and clean it up
         const bestSentence = relevantSentences[0].trim();
         return this.cleanupDesktopSentence(bestSentence, query);
       }
-
+      
       // Fallback: extract text around the query
       const queryIndex = cleaned.toLowerCase().indexOf(queryLower);
       if (queryIndex !== -1) {
@@ -1547,7 +1547,7 @@ export class UniversalHistorySearchEngine {
         const contextSnippet = cleaned.substring(start, end).trim();
         return this.cleanupDesktopSentence(contextSnippet, query);
       }
-
+      
       return null;
     } catch (error) {
       return null;
@@ -1557,15 +1557,15 @@ export class UniversalHistorySearchEngine {
   private cleanupDesktopSentence(sentence: string, query: string): string {
     // Remove excessive spaces and cleanup artifacts
     let cleaned = sentence.replace(/\s+/g, ' ').trim();
-
+    
     // Remove common LevelDB artifacts
     cleaned = cleaned.replace(/[{}\\'"]+/g, ' ');
     cleaned = cleaned.replace(/\d{13,}/g, ''); // Remove timestamps
     cleaned = cleaned.replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, ''); // Remove UUIDs
-
+    
     // Final cleanup
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
-
+    
     // Ensure the query is preserved and highlighted context is meaningful
     const queryIndex = cleaned.toLowerCase().indexOf(query.toLowerCase());
     if (queryIndex !== -1) {
@@ -1573,13 +1573,13 @@ export class UniversalHistorySearchEngine {
       const start = Math.max(0, queryIndex - 20);
       const end = Math.min(cleaned.length, queryIndex + query.length + 80);
       const result = cleaned.substring(start, end).trim();
-
+      
       // Only return if it's a meaningful sentence
       if (result.length > 15 && !result.match(/^[\s\W]+$/)) {
         return result;
       }
     }
-
+    
     return cleaned.length > 15 ? cleaned : '';
   }
 
@@ -1587,33 +1587,33 @@ export class UniversalHistorySearchEngine {
     let score = 0;
     const contentLower = content.toLowerCase();
     const queryLower = query.toLowerCase();
-
+    
     // Exact query match
     if (contentLower.includes(queryLower)) {
       score += 10;
     }
-
+    
     // Word matches
     const queryWords = queryLower.split(/\s+/);
     const contentWords = contentLower.split(/\s+/);
-    const matchingWords = queryWords.filter(word =>
+    const matchingWords = queryWords.filter(word => 
       contentWords.some(cWord => cWord.includes(word))
     );
     score += matchingWords.length * 3;
-
+    
     // Desktop content gets bonus for being rare/valuable
     score += 8;
-
+    
     // Extra bonus for Desktop content with exact query match
     if (contentLower.includes(queryLower)) {
       score += 5; // Desktop exact matches get priority
     }
-
+    
     // Penalize very short or garbled content
     if (content.length < 30) score -= 5;
     const nonWordMatches = content.match(/[^\w\s.,!?-]/g);
     if (nonWordMatches && nonWordMatches.length > content.length * 0.3) score -= 3;
-
+    
     return Math.max(0, score);
   }
 }

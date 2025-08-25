@@ -247,18 +247,18 @@ class ClaudeHistorianDXTServer {
 
             const detailLevel = args?.detail_level || 'summary';
             const formattedResult = this.formatter.formatSearchConversations(universalResult.results, detailLevel);
-
+            
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? 'Searching: Claude Code + Desktop'
               : 'Searching: Claude Code';
             const actionInfo = `Query: "${args?.query}" | Action: Conversation search`;
             const scope = args?.project ? ` | Project: ${args?.project}` : '';
             const timeInfo = args?.timeframe ? ` | Time: ${args?.timeframe}` : '';
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo + scope + timeInfo;
-
+            
             return {
               content: [
                 {
@@ -277,16 +277,16 @@ class ClaudeHistorianDXTServer {
 
             const detailLevel = args?.detail_level || 'summary';
             const operationType = args?.operation_type || 'all';
-
+            
             const formattedResult = this.formatter.formatFileContext(universalResult.results, args?.filepath, detailLevel, operationType);
-
+            
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? 'Searching: Claude Code + Desktop'
               : 'Searching: Claude Code';
             const actionInfo = `Target: "${args?.filepath}" | Action: File change history`;
             const filterInfo = operationType !== 'all' ? ` | Filter: ${operationType}` : '';
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo + filterInfo;
 
@@ -308,16 +308,16 @@ class ClaudeHistorianDXTServer {
 
             const detailLevel = args?.detail_level || 'summary';
             const formattedResult = this.formatter.formatSimilarQueries(universalResult.results, args?.query, detailLevel);
-
+            
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? 'Searching: Claude Code + Desktop'
               : 'Searching: Claude Code';
             const actionInfo = `Query: "${args?.query}" | Action: Similar queries & patterns`;
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo;
-
+            
             return {
               content: [
                 {
@@ -340,16 +340,16 @@ class ClaudeHistorianDXTServer {
               args?.error_pattern,
               detailLevel
             );
-
+            
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? 'Searching: Claude Code + Desktop'
               : 'Searching: Claude Code';
             const actionInfo = `Error: "${args?.error_pattern}" | Action: Solution lookup`;
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo;
-
+            
             return {
               content: [
                 {
@@ -367,13 +367,13 @@ class ClaudeHistorianDXTServer {
 
             const universalResult = await this.universalEngine.getRecentSessions(limit, project);
             const formattedResult = this.formatter.formatRecentSessions(universalResult.results, project);
-
+            
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? 'Searching: Claude Code + Desktop'
               : 'Searching: Claude Code';
             const actionInfo = `Action: Recent session analysis` + (project ? ` | Project: ${project}` : '') + (includeSummary ? ' | With summaries' : '');
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo;
 
@@ -393,13 +393,13 @@ class ClaudeHistorianDXTServer {
             const focus = args?.focus || 'all';
 
             const universalResult = await this.universalEngine.generateCompactSummary(sessionId, maxMessages, focus);
-
-            const sourceInfo = universalResult.enhanced
+            
+            const sourceInfo = universalResult.enhanced 
               ? 'Searching: Claude Code + Desktop'
               : 'Searching: Claude Code';
             const actionInfo = `Session: "${sessionId}" | Action: Compact summary | Focus: ${focus}`;
             const summaryContent = universalResult.results.summary;
-
+            
             const formattedResult = `${sourceInfo}\n${actionInfo}\n\n${summaryContent}`;
 
             return {
@@ -420,13 +420,13 @@ class ClaudeHistorianDXTServer {
 
             const patternType = args?.pattern_type || 'tools';
             const formattedResult = this.formatter.formatToolPatterns(universalResult.results, args?.tool_name, patternType);
-
+            
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? 'Searching: Claude Code + Desktop'
               : 'Searching: Claude Code';
             const actionInfo = `Tool: "${args?.tool_name || 'all'}" | Action: Pattern analysis | Type: ${patternType}`;
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo;
 
@@ -457,21 +457,21 @@ class ClaudeHistorianDXTServer {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error('Claude Historian DXT server running on stdio');
-
+    
     // DXT-specific: Let Node.js event loop keep process alive naturally
     // DO NOT use infinite promise - it blocks Claude Desktop transport
-
+    
     // Handle graceful shutdown
     process.on('SIGINT', () => {
       console.error('DXT server received SIGINT, shutting down gracefully...');
       process.exit(0);
     });
-
+    
     process.on('SIGTERM', () => {
       console.error('DXT server received SIGTERM, shutting down gracefully...');
       process.exit(0);
     });
-
+    
     // Add error handlers for debugging
     process.on('uncaughtException', (error) => {
       console.error('DXT server uncaught exception:', error);

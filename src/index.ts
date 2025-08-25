@@ -246,19 +246,19 @@ class ClaudeHistorianServer {
 
             const detailLevel = (args?.detail_level as string) || 'summary';
             const formattedResult = this.formatter.formatSearchConversations(universalResult.results, detailLevel);
-
+            
             // Create enhanced 3-line header with search context
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? '[⌐■_■] Searching: Claude Code + Desktop'
               : '[⌐■_■] Searching: Claude Code';
             const actionInfo = `Query: "${args?.query}" | Action: Conversation search`;
             const scope = args?.project ? ` | Project: ${args?.project}` : '';
             const timeInfo = args?.timeframe ? ` | Time: ${args?.timeframe}` : '';
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo + scope + timeInfo;
-
+            
             return {
               content: [
                 {
@@ -277,17 +277,17 @@ class ClaudeHistorianServer {
 
             const detailLevel = (args?.detail_level as string) || 'summary';
             const operationType = (args?.operation_type as string) || 'all';
-
+            
             const formattedResult = this.formatter.formatFileContext(universalResult.results, args?.filepath as string, detailLevel, operationType);
-
+            
             // Create enhanced 3-line header with file context
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? '[⌐□_□] Searching: Claude Code + Desktop'
               : '[⌐□_□] Searching: Claude Code';
             const actionInfo = `Target: "${args?.filepath}" | Action: File change history`;
             const filterInfo = operationType !== 'all' ? ` | Filter: ${operationType}` : '';
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo + filterInfo;
 
@@ -309,17 +309,17 @@ class ClaudeHistorianServer {
 
             const detailLevel = (args?.detail_level as string) || 'summary';
             const formattedResult = this.formatter.formatSimilarQueries(universalResult.results, args?.query as string, detailLevel);
-
+            
             // Create enhanced 3-line header with similarity context
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? '[⌐◆_◆] Searching: Claude Code + Desktop'
               : '[⌐◆_◆] Searching: Claude Code';
             const actionInfo = `Query: "${args?.query}" | Action: Similar queries & patterns`;
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo;
-
+            
             return {
               content: [
                 {
@@ -342,17 +342,17 @@ class ClaudeHistorianServer {
               args?.error_pattern as string,
               detailLevel
             );
-
+            
             // Create enhanced 3-line header with error context
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? '[⌐×_×] Searching: Claude Code + Desktop'
               : '[⌐×_×] Searching: Claude Code';
             const actionInfo = `Error: "${args?.error_pattern}" | Action: Solution lookup`;
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo;
-
+            
             return {
               content: [
                 {
@@ -370,14 +370,14 @@ class ClaudeHistorianServer {
 
             const universalResult = await this.universalEngine.getRecentSessions(limit, project);
             const formattedResult = this.formatter.formatRecentSessions(universalResult.results as any, project);
-
+            
             // Create enhanced 3-line header with session context
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? '[⌐○_○] Searching: Claude Code + Desktop'
               : '[⌐○_○] Searching: Claude Code';
             const actionInfo = `Action: Recent session analysis` + (project ? ` | Project: ${project}` : '') + (includeSummary ? ' | With summaries' : '');
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo;
 
@@ -397,14 +397,14 @@ class ClaudeHistorianServer {
             const focus = (args?.focus as string) || 'all';
 
             const universalResult = await this.universalEngine.generateCompactSummary(sessionId, maxMessages, focus);
-
+            
             // Create enhanced 3-line header with summary context
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? '[⌐◉_◉] Searching: Claude Code + Desktop'
               : '[⌐◉_◉] Searching: Claude Code';
             const actionInfo = `Session: "${sessionId}" | Action: Compact summary | Focus: ${focus}`;
             const summaryContent = (universalResult.results as any).summary;
-
+            
             const formattedResult = `${sourceInfo}\n${actionInfo}\n\n${summaryContent}`;
 
             return {
@@ -425,14 +425,14 @@ class ClaudeHistorianServer {
 
             const patternType = (args?.pattern_type as string) || 'tools';
             const formattedResult = this.formatter.formatToolPatterns(universalResult.results as any, args?.tool_name as string, patternType);
-
+            
             // Create enhanced 3-line header with tool pattern context
             const lines = formattedResult.split('\n');
-            const sourceInfo = universalResult.enhanced
+            const sourceInfo = universalResult.enhanced 
               ? '[⌐⎚_⎚] Searching: Claude Code + Desktop'
               : '[⌐⎚_⎚] Searching: Claude Code';
             const actionInfo = `Tool: "${args?.tool_name || 'all'}" | Action: Pattern analysis | Type: ${patternType}`;
-
+            
             lines[0] = sourceInfo;
             lines[1] = actionInfo;
 
@@ -463,18 +463,18 @@ class ClaudeHistorianServer {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error('Claude Historian MCP server running on stdio');
-
+    
     // Keep the process alive by listening for process signals
     process.on('SIGINT', () => {
       console.error('Received SIGINT, shutting down gracefully...');
       process.exit(0);
     });
-
+    
     process.on('SIGTERM', () => {
       console.error('Received SIGTERM, shutting down gracefully...');
       process.exit(0);
     });
-
+    
     // Keep the process alive indefinitely until killed
     await new Promise<void>(() => {
       // This promise never resolves, keeping the server running

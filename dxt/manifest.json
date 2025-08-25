@@ -11,7 +11,7 @@
     "url": "https://github.com/vvkmnn"
   },
   "repository": {
-    "type": "git",
+    "type": "git", 
     "url": "https://github.com/Vvkmnn/claude-historian"
   },
   "homepage": "https://github.com/Vvkmnn/claude-historian#readme",
@@ -21,7 +21,7 @@
   "icon": "icon.png",
   "keywords": [
     "claude",
-    "claude-code",
+    "claude-code", 
     "mcp",
     "mcp-server",
     "history",
@@ -46,7 +46,7 @@
       "description": "Search through Claude Code conversation history with smart insights"
     },
     {
-      "name": "find_file_context",
+      "name": "find_file_context", 
       "description": "Find all conversations and changes related to a specific file"
     },
     {
