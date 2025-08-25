@@ -1,0 +1,62 @@
+{
+  "dxt_version": "0.1.0",
+  "name": "claude-historian",
+  "version": "1.0.1",
+  "display_name": "Claude Historian",
+  "description": "Universal Claude conversation history search for Code and Desktop with intelligent ranking, workflow detection, and cool robot faces [⌐■_■]",
+  "long_description": "A Model Context Protocol (MCP) server that provides intelligent search across your Claude Code and Claude Desktop conversation history. Find past solutions, track file changes, learn from previous work, and discover patterns in your development workflow.\n\n🔍 **7 Powerful Tools:**\n• [⌐■_■] Search conversations with smart ranking\n• [⌐□_□] Track file changes across conversations  \n• [⌐×_×] Find solutions to specific errors\n• [⌐◆_◆] Discover similar questions and patterns\n• [⌐○_○] Browse recent sessions with productivity metrics\n• [⌐⎚_⎚] Analyze tool usage patterns and workflows\n• [⌐◉_◉] Generate intelligent session summaries\n\n⚡ **Features:**\n• Parallel processing for 6x speed improvement\n• Workflow detection (Edit → Read → Bash patterns)\n• Technical content preservation (never truncates mid-function)\n• Universal compatibility (Claude Code + Desktop)\n• Zero configuration required\n\n🎯 **Perfect for developers who want to:**\n• Learn from past debugging sessions\n• Find solutions to recurring errors\n• Track file modification history\n• Discover successful tool workflows\n• Boost productivity with conversation insights",
+  "author": {
+    "name": "Vivek Menon",
+    "email": "vvkmnn@users.noreply.github.com",
+    "url": "https://github.com/vvkmnn"
+  },
+  "homepage": "https://github.com/Vvkmnn/claude-historian",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vvkmnn/claude-historian"
+  },
+  "license": "MIT",
+  "icon": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bf/Claude_Fauchet_par_Thomas_de_Leu.jpg/336px-Claude_Fauchet_par_Thomas_de_Leu.jpg",
+  "keywords": [
+    "claude", "claude-code", "claude-desktop", "mcp", "history", "search",
+    "conversation", "developer-tools", "productivity", "workflow", "debugging"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "./dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["./dist/index.js"]
+    }
+  },
+  "tools": [
+    {
+      "name": "search_conversations",
+      "description": "🔍 Search through Claude Code + Desktop conversation history with intelligent ranking and workflow detection. Find past solutions, debugging sessions, and development patterns with cool robot face [⌐■_■]"
+    },
+    {
+      "name": "find_file_context",
+      "description": "📁 Track changes and operations for specific files across all conversations. See the complete history of edits, reads, and modifications with robot guide [⌐□_□]"
+    },
+    {
+      "name": "get_error_solutions",
+      "description": "🔧 Find solutions to specific errors from past conversations. Quickly locate how similar errors were resolved before with error detective [⌐×_×]"
+    },
+    {
+      "name": "find_similar_queries",
+      "description": "🔗 Discover related questions and conversations based on semantic similarity. Find patterns in your development questions with pattern matcher [⌐◆_◆]"
+    },
+    {
+      "name": "list_recent_sessions",
+      "description": "📊 Browse recent conversation sessions with productivity metrics. See which sessions were most active and productive with session analyzer [⌐○_○]"
+    },
+    {
+      "name": "find_tool_patterns",
+      "description": "🛠️ Analyze tool usage patterns and workflows. Discover which tool combinations work best for different tasks with workflow expert [⌐⎚_⎚]"
+    },
+    {
+      "name": "extract_compact_summary",
+      "description": "📋 Generate intelligent summaries of conversation sessions with key insights and productivity metrics with summary specialist [⌐◉_◉]"
+    }
+  ]
+}

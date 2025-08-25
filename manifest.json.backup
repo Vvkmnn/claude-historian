@@ -1,0 +1,47 @@
+{
+  "name": "claude-historian",
+  "version": "1.0.1",
+  "description": "Universal Claude conversation history search for Code and Desktop",
+  "author": "Claude Code Community",
+  "main": "dist/index.js",
+  "type": "mcp-server",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "capabilities": {
+    "tools": true,
+    "resources": false,
+    "prompts": false
+  },
+  "configuration": {
+    "command": "node",
+    "args": ["dist/index.js"],
+    "env": {}
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "level": "^10.0.0",
+    "leveldown": "^6.1.1",
+    "levelup": "^5.1.1",
+    "better-sqlite3": "^11.10.0"
+  },
+  "keywords": [
+    "claude",
+    "claude-desktop",
+    "claude-code",
+    "mcp",
+    "history",
+    "search",
+    "conversation",
+    "desktop-integration"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Vvkmnn/claude-historian#readme",
+  "bugs": {
+    "url": "https://github.com/Vvkmnn/claude-historian/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vvkmnn/claude-historian.git"
+  }
+}

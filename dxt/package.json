@@ -1,0 +1,11 @@
+{
+  "name": "claude-historian-dxt",
+  "version": "1.0.1",
+  "description": "Claude Historian DXT package for Claude Desktop",
+  "type": "module",
+  "main": "server.js",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "level": "^10.0.0"
+  }
+}

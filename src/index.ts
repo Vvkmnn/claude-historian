@@ -10,10 +10,12 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { HistorySearchEngine } from './search.js';
 import { BeautifulFormatter } from './formatter.js';
+import { UniversalHistorySearchEngine } from './universal-engine.js';
 
 class ClaudeHistorianServer {
   private server: Server;
   private searchEngine: HistorySearchEngine;
+  private universalEngine: UniversalHistorySearchEngine;
   private formatter: BeautifulFormatter;
 
   constructor() {
@@ -30,6 +32,7 @@ class ClaudeHistorianServer {
     );
 
     this.searchEngine = new HistorySearchEngine();
+    this.universalEngine = new UniversalHistorySearchEngine();
     this.formatter = new BeautifulFormatter();
     this.setupToolHandlers();
   }
@@ -234,7 +237,7 @@ class ClaudeHistorianServer {
 
         switch (name) {
           case 'search_conversations': {
-            const searchResult = await this.searchEngine.searchConversations(
+            const universalResult = await this.universalEngine.searchConversations(
               args?.query as string,
               args?.project as string,
               args?.timeframe as string,
@@ -242,18 +245,32 @@ class ClaudeHistorianServer {
             );
 
             const detailLevel = (args?.detail_level as string) || 'summary';
+            const formattedResult = this.formatter.formatSearchConversations(universalResult.results, detailLevel);
+
+            // Create enhanced 3-line header with search context
+            const lines = formattedResult.split('\n');
+            const sourceInfo = universalResult.enhanced
+              ? '[⌐■_■] Searching: Claude Code + Desktop'
+              : '[⌐■_■] Searching: Claude Code';
+            const actionInfo = `Query: "${args?.query}" | Action: Conversation search`;
+            const scope = args?.project ? ` | Project: ${args?.project}` : '';
+            const timeInfo = args?.timeframe ? ` | Time: ${args?.timeframe}` : '';
+
+            lines[0] = sourceInfo;
+            lines[1] = actionInfo + scope + timeInfo;
+
             return {
               content: [
                 {
                   type: 'text',
-                  text: this.formatter.formatSearchConversations(searchResult, detailLevel),
+                  text: lines.join('\n'),
                 },
               ],
             };
           }
 
           case 'find_file_context': {
-            const fileContexts = await this.searchEngine.findFileContext(
+            const universalResult = await this.universalEngine.findFileContext(
               args?.filepath as string,
               (args?.limit as number) || 15
             );
@@ -261,49 +278,86 @@ class ClaudeHistorianServer {
             const detailLevel = (args?.detail_level as string) || 'summary';
             const operationType = (args?.operation_type as string) || 'all';
 
+            const formattedResult = this.formatter.formatFileContext(universalResult.results, args?.filepath as string, detailLevel, operationType);
+
+            // Create enhanced 3-line header with file context
+            const lines = formattedResult.split('\n');
+            const sourceInfo = universalResult.enhanced
+              ? '[⌐□_□] Searching: Claude Code + Desktop'
+              : '[⌐□_□] Searching: Claude Code';
+            const actionInfo = `Target: "${args?.filepath}" | Action: File change history`;
+            const filterInfo = operationType !== 'all' ? ` | Filter: ${operationType}` : '';
+
+            lines[0] = sourceInfo;
+            lines[1] = actionInfo + filterInfo;
+
             return {
               content: [
                 {
                   type: 'text',
-                  text: this.formatter.formatFileContext(fileContexts, args?.filepath as string, detailLevel, operationType),
+                  text: lines.join('\n'),
                 },
               ],
             };
           }
 
           case 'find_similar_queries': {
-            const similarQueries = await this.searchEngine.findSimilarQueries(
+            const universalResult = await this.universalEngine.findSimilarQueries(
               args?.query as string,
               (args?.limit as number) || 8
             );
 
             const detailLevel = (args?.detail_level as string) || 'summary';
+            const formattedResult = this.formatter.formatSimilarQueries(universalResult.results, args?.query as string, detailLevel);
+
+            // Create enhanced 3-line header with similarity context
+            const lines = formattedResult.split('\n');
+            const sourceInfo = universalResult.enhanced
+              ? '[⌐◆_◆] Searching: Claude Code + Desktop'
+              : '[⌐◆_◆] Searching: Claude Code';
+            const actionInfo = `Query: "${args?.query}" | Action: Similar queries & patterns`;
+
+            lines[0] = sourceInfo;
+            lines[1] = actionInfo;
+
             return {
               content: [
                 {
                   type: 'text',
-                  text: this.formatter.formatSimilarQueries(similarQueries, args?.query as string, detailLevel),
+                  text: lines.join('\n'),
                 },
               ],
             };
           }
 
           case 'get_error_solutions': {
-            const errorSolutions = await this.searchEngine.getErrorSolutions(
+            const universalResult = await this.universalEngine.getErrorSolutions(
               args?.error_pattern as string,
               (args?.limit as number) || 8
             );
 
             const detailLevel = (args?.detail_level as string) || 'summary';
+            const formattedResult = this.formatter.formatErrorSolutions(
+              universalResult.results,
+              args?.error_pattern as string,
+              detailLevel
+            );
+
+            // Create enhanced 3-line header with error context
+            const lines = formattedResult.split('\n');
+            const sourceInfo = universalResult.enhanced
+              ? '[⌐×_×] Searching: Claude Code + Desktop'
+              : '[⌐×_×] Searching: Claude Code';
+            const actionInfo = `Error: "${args?.error_pattern}" | Action: Solution lookup`;
+
+            lines[0] = sourceInfo;
+            lines[1] = actionInfo;
+
             return {
               content: [
                 {
                   type: 'text',
-                  text: this.formatter.formatErrorSolutions(
-                    errorSolutions,
-                    args?.error_pattern as string,
-                    detailLevel
-                  ),
+                  text: lines.join('\n'),
                 },
               ],
             };
@@ -314,13 +368,24 @@ class ClaudeHistorianServer {
             const project = args?.project as string;
             const includeSummary = (args?.include_summary as boolean) !== false;
 
-            const smartSessions = await this.getEnhancedRecentSessions(limit, project, includeSummary);
+            const universalResult = await this.universalEngine.getRecentSessions(limit, project);
+            const formattedResult = this.formatter.formatRecentSessions(universalResult.results as any, project);
+
+            // Create enhanced 3-line header with session context
+            const lines = formattedResult.split('\n');
+            const sourceInfo = universalResult.enhanced
+              ? '[⌐○_○] Searching: Claude Code + Desktop'
+              : '[⌐○_○] Searching: Claude Code';
+            const actionInfo = `Action: Recent session analysis` + (project ? ` | Project: ${project}` : '') + (includeSummary ? ' | With summaries' : '');
+
+            lines[0] = sourceInfo;
+            lines[1] = actionInfo;
 
             return {
               content: [
                 {
                   type: 'text',
-                  text: smartSessions,
+                  text: lines.join('\n'),
                 },
               ],
             };
@@ -331,31 +396,51 @@ class ClaudeHistorianServer {
             const maxMessages = (args?.max_messages as number) || 10;
             const focus = (args?.focus as string) || 'all';
 
-            const summary = await this.generateSmartSummary(sessionId, maxMessages, focus);
+            const universalResult = await this.universalEngine.generateCompactSummary(sessionId, maxMessages, focus);
+
+            // Create enhanced 3-line header with summary context
+            const sourceInfo = universalResult.enhanced
+              ? '[⌐◉_◉] Searching: Claude Code + Desktop'
+              : '[⌐◉_◉] Searching: Claude Code';
+            const actionInfo = `Session: "${sessionId}" | Action: Compact summary | Focus: ${focus}`;
+            const summaryContent = (universalResult.results as any).summary;
+
+            const formattedResult = `${sourceInfo}\n${actionInfo}\n\n${summaryContent}`;
 
             return {
               content: [
                 {
                   type: 'text',
-                  text: summary,
+                  text: formattedResult,
                 },
               ],
             };
           }
 
           case 'find_tool_patterns': {
-            const toolPatterns = await this.searchEngine.getToolPatterns(
+            const universalResult = await this.universalEngine.getToolPatterns(
               args?.tool_name as string,
               (args?.limit as number) || 12
             );
 
             const patternType = (args?.pattern_type as string) || 'tools';
+            const formattedResult = this.formatter.formatToolPatterns(universalResult.results as any, args?.tool_name as string, patternType);
+
+            // Create enhanced 3-line header with tool pattern context
+            const lines = formattedResult.split('\n');
+            const sourceInfo = universalResult.enhanced
+              ? '[⌐⎚_⎚] Searching: Claude Code + Desktop'
+              : '[⌐⎚_⎚] Searching: Claude Code';
+            const actionInfo = `Tool: "${args?.tool_name || 'all'}" | Action: Pattern analysis | Type: ${patternType}`;
+
+            lines[0] = sourceInfo;
+            lines[1] = actionInfo;
 
             return {
               content: [
                 {
                   type: 'text',
-                  text: this.formatter.formatToolPatterns(toolPatterns, args?.tool_name as string, patternType),
+                  text: lines.join('\n'),
                 },
               ],
             };
@@ -378,6 +463,22 @@ class ClaudeHistorianServer {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error('Claude Historian MCP server running on stdio');
+
+    // Keep the process alive by listening for process signals
+    process.on('SIGINT', () => {
+      console.error('Received SIGINT, shutting down gracefully...');
+      process.exit(0);
+    });
+
+    process.on('SIGTERM', () => {
+      console.error('Received SIGTERM, shutting down gracefully...');
+      process.exit(0);
+    });
+
+    // Keep the process alive indefinitely until killed
+    await new Promise<void>(() => {
+      // This promise never resolves, keeping the server running
+    });
   }
   private async generateSmartSummary(sessionId: string, maxMessages: number, focus: string = 'all'): Promise<string> {
     try {
@@ -584,7 +685,7 @@ class ClaudeHistorianServer {
       }
 
       // Use the enhanced formatter for consistency and improvements
-      return this.formatter.formatRecentSessions(filteredSessions);
+      return this.formatter.formatRecentSessions(filteredSessions, project);
     } catch (error) {
       return `[⌐○_○] Enhanced session listing failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }

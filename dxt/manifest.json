@@ -1,0 +1,73 @@
+{
+  "dxt_version": "0.1",
+  "name": "claude-historian",
+  "display_name": "Claude Historian",
+  "version": "1.0.1",
+  "description": "A Model Context Protocol server for searching your Claude Code conversation history",
+  "long_description": "A Model Context Protocol (MCP) server for searching your Claude Code conversation history. Find past solutions, track file changes, and learn from previous work.\n\nFeatures:\n- Search conversations with smart ranking\n- Track file changes across conversations\n- Find solutions to specific errors\n- Discover similar questions and patterns\n- Browse recent sessions with productivity metrics\n- Analyze tool usage patterns and workflows\n- Generate intelligent session summaries\n\nFast search with smart prioritization. Zero configuration required.",
+  "author": {
+    "name": "Claude Code Community",
+    "email": "vvkmnn@users.noreply.github.com",
+    "url": "https://github.com/vvkmnn"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vvkmnn/claude-historian"
+  },
+  "homepage": "https://github.com/Vvkmnn/claude-historian#readme",
+  "documentation": "https://github.com/Vvkmnn/claude-historian/blob/master/README.md",
+  "support": "https://github.com/Vvkmnn/claude-historian/issues",
+  "license": "MIT",
+  "icon": "icon.png",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "mcp",
+    "mcp-server",
+    "history",
+    "search",
+    "conversation",
+    "ai",
+    "developer-tools",
+    "productivity"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["server.js"],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "search_conversations",
+      "description": "Search through Claude Code conversation history with smart insights"
+    },
+    {
+      "name": "find_file_context",
+      "description": "Find all conversations and changes related to a specific file"
+    },
+    {
+      "name": "find_similar_queries",
+      "description": "Find previous similar questions or queries with enhanced matching"
+    },
+    {
+      "name": "get_error_solutions",
+      "description": "Find solutions for specific errors with enhanced matching"
+    },
+    {
+      "name": "list_recent_sessions",
+      "description": "Browse recent sessions with smart activity detection and summaries"
+    },
+    {
+      "name": "extract_compact_summary",
+      "description": "Get intelligent summary of a conversation session with key insights"
+    },
+    {
+      "name": "find_tool_patterns",
+      "description": "Analyze tool usage patterns, workflows, and successful practices"
+    }
+  ]
+}

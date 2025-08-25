@@ -4,7 +4,7 @@
 
 ![claude-historian](demo.gif)
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for searching your [Claude Code](https://docs.anthropic.com/en/docs/claude-code) conversation history. Find past solutions, track file changes, and learn from previous work.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for searching your [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (& [Claude Desktop](https://claude.ai/download) conversation history. Find past solutions, track file changes, and learn from previous work.
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![npm version](https://img.shields.io/npm/v/claude-historian.svg)](https://www.npmjs.com/package/claude-historian)
@@ -123,7 +123,7 @@ How [claude-historian](https://github.com/Vvkmnn/claude-historian) [works](https
 
 **Core optimizations:**
 
-- [parallel processing](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L949): `Promise.allSettled` for 6x speed improvement across projects and files  
+- [parallel processing](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L949): `Promise.allSettled` for 6x speed improvement across projects and files
 - [workflow detection](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L984): Captures tool sequences like "Edit → Read → Bash" patterns
 - [enhanced file matching](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L704): Comprehensive path variations with case-insensitive matching
 - [intelligent deduplication](https://github.com/Vvkmnn/claude-historian/blob/master/src/search-helpers.ts#L110): Content-based deduplication preserving highest-scoring results
@@ -140,7 +140,7 @@ How [claude-historian](https://github.com/Vvkmnn/claude-historian) [works](https
 - **[Exponential time decay](https://en.wikipedia.org/wiki/Exponential_decay)** (getTimeRangeFilter): Recent messages weighted higher with configurable half-life
 - **[Parallel file processing](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/allSettled)** ([getErrorSolutions](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L838)): Concurrent project scanning with early termination for 0.8s response times
 - **[Workflow pattern recognition](https://en.wikipedia.org/wiki/Sequential_pattern_mining)** ([getToolPatterns](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L937)): Detects tool usage sequences and related workflows for learning
-- **[Enhanced file context](https://en.wikipedia.org/wiki/Path_(computing))** ([findFileContext](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L666)): Multi-project search with comprehensive path matching
+- **[Enhanced file context](<https://en.wikipedia.org/wiki/Path_(computing)>)** ([findFileContext](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L666)): Multi-project search with comprehensive path matching
 - **[Content-aware truncation](https://en.wikipedia.org/wiki/Text_segmentation)** ([smartTruncation](https://github.com/Vvkmnn/claude-historian/blob/master/src/formatter.ts#L46)): Intelligent content boundaries over arbitrary character limits
 - **[Technical content prioritization](https://en.wikipedia.org/wiki/Information_extraction)** ([formatSearchResults](https://github.com/Vvkmnn/claude-historian/blob/master/src/formatter.ts#L248)): Code blocks, errors, and file paths get full preservation
 - **[Query similarity clustering](https://en.wikipedia.org/wiki/Cluster_analysis)** ([findSimilarQueries](https://github.com/Vvkmnn/claude-historian/blob/master/src/search.ts#L783)): Semantic expansion and pattern grouping for related questions
@@ -172,7 +172,7 @@ npm test
 ```bash
 npm run build          # TypeScript compilation with executable permissions
 npm run dev            # Watch mode with tsc --watch
-npm run lint           # ESLint code quality checks  
+npm run lint           # ESLint code quality checks
 npm run format         # Prettier formatting
 npm run type-check     # TypeScript validation without emit
 npm run prepublishOnly # Pre-publish validation (build + lint + format)
@@ -189,6 +189,12 @@ Learn from examples:
 - [Official MCP servers](https://github.com/modelcontextprotocol/servers) for reference implementations
 - [TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk) for best practices
 - [Creating Node.js modules](https://docs.npmjs.com/creating-node-js-modules) - NPM package development guide
+
+## desktop
+
+Claude Desktop support is currently blocked by [LevelDB locks](https://github.com/Level/level#open) and [Electron sandboxing](https://www.electronjs.org/docs/latest/tutorial/sandbox). You will still search Claude Desktop from Claude Code, but **only when the Claude app is closed**.
+
+A DXT package and build is available for future compatibility; further investigations are ongoing. Feel free to test with it.
 
 ## license
 

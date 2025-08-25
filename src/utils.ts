@@ -1,6 +1,8 @@
-import { readdir, stat } from 'fs/promises';
+import { readdir, stat, access } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
+import { platform } from 'os';
+import { constants } from 'fs';
 
 export function getClaudeProjectsPath(): string {
   return join(homedir(), '.claude', 'projects');
@@ -141,4 +143,56 @@ export function getTimeRangeFilter(timeframe?: string): (timestamp: string) => b
     const messageDate = new Date(timestamp);
     return messageDate >= cutoff;
   };
+}
+
+export function getClaudeDesktopPath(): string | null {
+  switch (platform()) {
+    case 'darwin':
+      return join(homedir(), 'Library/Application Support/Claude/');
+    case 'win32':
+      return join(process.env.APPDATA || '', 'Claude/');
+    case 'linux':
+      return join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'Claude/');
+    default:
+      return null;
+  }
+}
+
+export async function detectClaudeDesktop(): Promise<boolean> {
+  try {
+    const desktopPath = getClaudeDesktopPath();
+    if (!desktopPath) return false;
+
+    const configPath = join(desktopPath, 'claude_desktop_config.json');
+    await access(configPath, constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function getClaudeDesktopStoragePath(): Promise<string | null> {
+  const desktopPath = getClaudeDesktopPath();
+  if (!desktopPath) return null;
+
+  const storagePath = join(desktopPath, 'Local Storage');
+  try {
+    await access(storagePath, constants.F_OK);
+    return storagePath;
+  } catch {
+    return null;
+  }
+}
+
+export async function getClaudeDesktopIndexedDBPath(): Promise<string | null> {
+  const desktopPath = getClaudeDesktopPath();
+  if (!desktopPath) return null;
+
+  const indexedDBPath = join(desktopPath, 'IndexedDB');
+  try {
+    await access(indexedDBPath, constants.F_OK);
+    return indexedDBPath;
+  } catch {
+    return null;
+  }
 }

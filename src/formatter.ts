@@ -243,7 +243,7 @@ export class BeautifulFormatter {
   // MCP Tool Operation Formatters
 
   formatSearchConversations(result: SearchResult, _detailLevel: string = 'summary'): string {
-    let output = `${robots.search} Search: "${result.searchQuery}"\n\n`;
+    let output = `Search: "${result.searchQuery}"\n\n`;
     
     if (result.messages.length === 0) {
       return output + 'No messages found matching your query.\n';
@@ -410,7 +410,7 @@ export class BeautifulFormatter {
   }
 
   formatFileContext(contexts: FileContext[], filepath: string, _detailLevel: string = 'summary', _operationType: string = 'all'): string {
-    let output = `${robots.fileContext} File context: ${filepath}\n\n`;
+    let output = `File context: ${filepath}\n\n`;
     
     if (contexts.length === 0) {
       return output + 'No file contexts found.\n';
@@ -507,7 +507,7 @@ export class BeautifulFormatter {
   }
 
   formatErrorSolutions(solutions: ErrorSolution[], errorPattern: string, _detailLevel: string = 'summary'): string {
-    let output = `${robots.errorSolutions} Error solutions for: "${errorPattern}"\n\n`;
+    let output = `Error solutions for: "${errorPattern}"\n\n`;
     
     if (solutions.length === 0) {
       return output + 'No error solutions found.\n';
@@ -589,7 +589,7 @@ export class BeautifulFormatter {
 
   formatToolPatterns(patterns: ToolPattern[], toolName?: string, _patternType: string = 'tools'): string {
     const toolFilter = toolName ? ` for "${toolName}"` : '';
-    let output = `${robots.toolPatterns} Tool usage patterns${toolFilter}\n\n`;
+    let output = `Tool usage patterns${toolFilter}\n\n`;
     
     if (patterns.length === 0) {
       return output + 'No tool patterns found.\n';
@@ -681,8 +681,8 @@ export class BeautifulFormatter {
     return practices[0] || '';
   }
 
-  formatRecentSessions(sessions: any[]): string {
-    let output = `${robots.sessions} Recent conversation sessions\n\n`;
+  formatRecentSessions(sessions: any[], project?: string): string {
+    let output = `Recent session analysis` + (project ? ` | Project: ${project}` : '') + '\n\n';
     
     if (sessions.length === 0) {
       return output + 'No recent sessions found.\n';
