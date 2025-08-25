@@ -1,5 +1,3 @@
-[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vvkmnn-claude-historian-badge.png)](https://mseep.ai/app/vvkmnn-claude-historian)
-
 # claude-historian
 
 ![claude-historian](demo.gif)
@@ -7,10 +5,12 @@
 A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for searching your [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (& [Claude Desktop](https://claude.ai/download)) conversation history. Find past solutions, track file changes, and learn from previous work.
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![npm version](https://img.shields.io/npm/v/claude-historian.svg)](https://www.npmjs.com/package/claude-historian)
+[![npm version](https://img.shields.io/npm/v/claude-historian.svg)](https://ww.npmjs.com/package/claude-historian)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org/)
 ![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/Vvkmnn/claude-historian?utm_source=oss&utm_medium=github&utm_campaign=Vvkmnn%2Fclaude-historian&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+![MseeP.ai Security Assessment Badge](https://mseep.net/pr/vvkmnn-claude-historian-badge.png)](https://mseep.ai/app/vvkmnn-claude-historian)
+[![Claude](https://img.shields.io/badge/Claude-D97757?logo=claude&logoColor=fff)](#)
 
 ## install
 
